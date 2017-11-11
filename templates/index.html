@@ -15,7 +15,7 @@
 
   </head>
   <body>
-<div class="container-wide text-center">
+<div class="container-wide">
     <div id="logo" class="row">
         <div class="container">
             <div class="row justify-content-sm-center">
@@ -30,7 +30,27 @@
             </div>
         </div>
     </div><!-- row END -->
-    <div class="row">
+
+    <div class="row text-center">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                {{ form.cdg_zip }}
+                {% for error in form.cdg_zip.errors %}
+                    <span style="color: red;">{{ error }}</span>
+                {% endfor %}
+                {{ form.submit }}
+            </form>
+
+            {% if file_url %}
+                <br>
+                {{ file_url }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row text-center">
             <div class="container">
                 <ul class="icons-ul">
                     <li class="col-md-1 col-sm-2 col-xs-6 grid-icon textshadow">
@@ -65,7 +85,7 @@
                     </li>
                 </div>
             </div>
-            <div class="row social-bar">
+            <div class="row social-bar text-center">
                     <div class="container">
                     <li class="grid-icon textshadow">
                         <a href="https://www.facebook.com/Karaokio/">

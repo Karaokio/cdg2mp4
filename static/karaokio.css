@@ -15,7 +15,7 @@ body {
 
 #logo {
     margin-top:70px;
-    margin-bottom: 50px;
+    margin-bottom: 10px;
 }
 
 .subtitle {
@@ -30,6 +30,7 @@ ul {
 li {
     display: inline-grid;
     min-width: min-content;
+    padding-bottom: 7px
 }
 
 .social-bar li {
