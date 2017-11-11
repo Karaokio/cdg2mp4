@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g, render_template
 
 from flask_uploads import ARCHIVES, UploadSet
 
@@ -31,11 +31,9 @@ def homepage():
 def testing():
     the_time = datetime.now().strftime("%A, %d %b %Y %l:%M %p")
 
-    sentry.captureMessage('Testing Sentry')
-
     return """
     <h1>Karaokio - CDG~2~MP4 Conversion</h1>
-    <p>Testing Sentry for captureMessage and 500 error</p>"""
+    <p>Testing</p>"""
 
 
 # in the case of a 500-error, bring up a Sentry Error Reporting Dialog
@@ -47,5 +45,4 @@ def internal_server_error(error):
     )
 
 if __name__ == '__main__':
-
     app.run(debug=True, use_reloader=True)
