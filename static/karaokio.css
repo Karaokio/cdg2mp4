@@ -1,0 +1,171 @@
+body {
+    min-height: -webkit-fill-available;
+    color: #fff;
+    background-color: #cd0928;
+
+    background: rgba(226,38,55,1);
+    background: -moz-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(185, 10, 37, 1)), color-stop(100%, rgba(143,8,29,1)));
+    background: -webkit-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -o-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -ms-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: linear-gradient(to bottom, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e22637', endColorstr='#b90a25', GradientType=0 );
+}
+
+#logo {
+    margin-top:70px;
+    margin-bottom: 50px;
+}
+
+.subtitle {
+   color: #fff;
+   text-shadow: 1px 2px 2px #4d4c4c;
+}
+
+ul {
+    list-style: none;
+    padding: 0px;
+}
+li {
+    display: inline-grid;
+    min-width: min-content;
+}
+
+.social-bar li {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.icon-text {
+    display: block;
+}
+
+.karaokio-red-gradient {
+    color: #fff;
+    background-color: #cd0928;
+
+    background: rgba(226,38,55,1);
+    background: -moz-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(185, 10, 37, 1)), color-stop(100%, rgba(143,8,29,1)));
+    background: -webkit-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -o-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: -ms-linear-gradient(top, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    background: linear-gradient(to bottom, rgba(226,38,55,1) 0%, rgba(185, 10, 37, 1) 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e22637', endColorstr='#b90a25', GradientType=0 );
+}
+
+.karaokio-red-gradient a {
+    color: #fff;
+}
+
+.karaokio-red-gradient a:hover {
+    color: #711e1e;
+}
+
+.karaokio-red-gradient.btn {
+    border-color: #b42f2f;
+}
+
+.karaokio-red-gradient.btn  {
+    border-color: #a42e2e;
+}
+
+
+.card-container {
+    background: #fff;
+    border:1px solid #858585;
+    border-radius: 5px;
+    box-shadow: 5px 5px 10px #c3c3c3;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.card-container-login {
+    background: #fff;
+    border:1px solid #858585;
+    border-radius: 5px;
+    box-shadow: 5px 5px 10px #c3c3c3;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 10px;
+}
+
+.card-container-form {
+    background: #fff;
+    border:1px solid #858585;
+    border-radius: 5px;
+    box-shadow: 5px 5px 10px #c3c3c3;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 10px;
+}
+
+.card-shadow {
+    background: #fff;
+    border:1px solid #858585;
+    border-radius: 5px;
+    box-shadow: 5px 5px 10px #c3c3c3;
+    margin-bottom: 0px;
+}
+.shadow {
+    box-shadow: 5px 5px 10px #c3c3c3;
+}
+
+a {
+    color: #fff;
+}
+
+a:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+.textshadow {
+   color: #fff;
+   text-shadow: 1px 2px 2px #4d4c4c;
+}
+.textshadow:hover {
+   color: #fff;
+   text-shadow: 1px 2px 4px #282828;
+}
+
+.footer {
+  margin-top: 50px;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  }
+
+.footer a {
+    color: #fff;
+}
+
+
+.container .top-row-footer {
+    margin: 0px 0px;
+    font-size: 80%;
+    color: #fff;
+}
+
+.container .text-muted {
+  margin: 3px 0;
+  font-size: 80%;
+}
+
+.footer > .container {
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+.footer > .container > ul >li {
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+.container .copyright {
+    font-size: 80%;
+}
