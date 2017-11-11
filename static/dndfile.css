@@ -1,0 +1,59 @@
+.white-button {
+  background-color: #f9f9f9;
+  color: #ab0922;
+  box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
+  font-weight: 600;
+}
+.white-button:hover {
+  box-shadow: 1px 2px 13px rgba(0, 0, 0, 0.5);
+}
+
+.inputDnD .form-control-file {
+  position: relative;
+  margin-bottom: 18px;
+  width: 100%;
+  height: 100%;
+  min-height: 6em;
+  outline: none;
+  visibility: hidden;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  box-shadow: 0 0 5px solid currentColor;
+}
+.inputDnD .form-control-file:before {
+  content: attr(data-title);
+  position: absolute;
+  top: 0.5em;
+  left: 0;
+  width: 100%;
+  min-height: 6em;
+  line-height: 2em;
+  padding-top: 1.9em;
+  opacity: 1;
+  visibility: visible;
+  text-align: center;
+  border: 0.1em dashed currentColor;
+  -webkit-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+  box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
+}
+.inputDnD .form-control-file:hover:before {
+  border-style: solid;
+  box-shadow: inset 0px 0px 0px 0.12em currentColor;
+  box-shadow: 0px 0px 0px 0.12em currentColor;
+}
+
+.dnd-textshadow {
+  color: #fff;
+  text-shadow: 1px 2px 2px #4d4c4c;
+}
+
+.dnd-textshadow:hover {
+  color: #fff;
+  text-shadow: 1px 2px 4px #282828;
+}
+
+.dnd-shadow {
+  box-shadow: 5px 5px 10px #c3c3c3;
+}
