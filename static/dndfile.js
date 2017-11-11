@@ -1,6 +1,6 @@
 "use strict";
 
-console.log("Loading drag and drop...");
+// https://codepen.io/liladas/pen/rYyXmY
 
 function readURL(input) {
   // read the url, grab the filename, display in box
