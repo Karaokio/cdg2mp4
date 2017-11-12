@@ -5,8 +5,10 @@
   font-weight: 600;
   cursor: pointer;
 }
+
 .white-button:hover {
   box-shadow: 1px 2px 13px rgba(0, 0, 0, 0.5);
+  color: #c20e29;
 }
 
 .inputDnD .form-control-file {
