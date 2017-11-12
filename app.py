@@ -1,15 +1,16 @@
-from flask import Flask, g, render_template
+from flask import Flask, g, render_template, redirect, url_for
 from werkzeug.utils import secure_filename
 from flask_uploads import UploadSet, patch_request_class, configure_uploads
 from flask_wtf import FlaskForm
 from wtforms import SubmitField
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 
+#Monitoring
 from raven.contrib.flask import Sentry
 
 import os
+import secrets
 
-from datetime import datetime
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -46,11 +47,20 @@ class UploadForm(FlaskForm):
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
-        filename = zips.save(form.cdg_zip.data)
+        id = secrets.token_hex()
+        filename = zips.save(form.cdg_zip.data, folder=id)
         file_url = zips.url(filename)
-    else:
-        file_url = None
-    return render_template('index.html', form=form, file_url=file_url)
+        return redirect(url_for('show_fileset', fileset_id=id))
+
+    return render_template('index.html', form=form)
+
+@app.route('/video/<fileset_id>')
+def show_fileset(fileset_id):
+    # show the post with the given id, the id is an integer
+
+
+
+    return 'FileSet %s' % fileset_id
 
 # in the case of a 500-error, bring up a Sentry Error Reporting Dialog
 @app.errorhandler(500)
