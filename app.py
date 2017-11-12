@@ -60,7 +60,7 @@ def show_fileset(fileset_id):
 
 
 
-    return 'FileSet %s' % fileset_id
+    return render_template('video_detail.html', fileset_id=fileset_id)
 
 # in the case of a 500-error, bring up a Sentry Error Reporting Dialog
 @app.errorhandler(500)

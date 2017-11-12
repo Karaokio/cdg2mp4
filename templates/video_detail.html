@@ -19,21 +19,6 @@
 
   </head>
   <body>
-        <script type="text/javascript">
-            function readURL(input) {
-              // read the url, grab the filename, display in box
-              if (input.files && input.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                  var file_data = e.target.result;
-                  var file_name = input.files[0].name;
-                  input.setAttribute("data-title", "Selected: " + file_name);
-                  //console.log(e.target.result);
-                };
-                reader.readAsDataURL(input.files[0]);
-              }
-            }
-        </script>
 
 <div class="container-wide">
     <div id="logo" class="row">
@@ -51,23 +36,16 @@
         </div>
     </div><!-- row END -->
 
-    <!-- // https://codepen.io/liladas/pen/rYyXmY -->
-    <div class="container p-y-1">
-        <div class="row m-b-1">
-            <div class="col-sm-6 offset-sm-3">
-                <form method="POST" enctype="multipart/form-data">
-                    {{ form.hidden_tag() }}
-                  <button type="button" class="btn btn-block white-button" onclick="document.getElementById('cdg_zip').click()">Add CDG.zip File</button>
-                  <div class="form-group inputDnD">
-                    <label class="sr-only" for="inputFile">File Upload</label>
-                    <input type="file" class="form-control-file font-weight-bold dnd-textshadow" id="cdg_zip" name="cdg_zip" accept=".zip" onchange="readURL(this);" data-title="Drag and drop a file">
-                    <input class="btn btn-block white-button" id="submit" name="submit" type="submit" value="Upload">
-                  </div>
-                </form>
-            </div>
+    <div class="row text-center">
+        <div class="container">
+            Video Conversion #{{fileset_id}}
+            <br>
+            pending...
         </div>
     </div>
-    <br>
+
+<p>
+
     <div class="row text-center">
             <div class="container">
                 <ul class="icons-ul">
@@ -154,7 +132,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
 
-    <!-- // https://codepen.io/liladas/pen/rYyXmY -->
-    <script type="text/javascript" src="/static/dndfile.js"></script>
   </body>
 </html>
