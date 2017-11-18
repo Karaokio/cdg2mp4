@@ -33,8 +33,17 @@ configure_uploads(app, zips)
 patch_request_class(app, 20 * 1024 * 1024)
 
 # Celery Config
-app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'amqp://') #redis?
-app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'amqp') #redis?
+if 'DYNO' in os.environ:
+    # Indicates Heroku environ
+    debug = False
+    app.config['CELERY_BROKER_URL'] = os.environ.get('RABBITMQ_BIGWIG_URL', 'amqp://') #redis?
+    app.config['CELERY_RESULT_BACKEND'] = os.environ.get('RABBITMQ_BIGWIG_URL', 'amqp') #redis?
+else:
+    #Local Dev
+    debug = True
+    app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'amqp://') #redis?
+    app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'amqp') #redis?
+
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
