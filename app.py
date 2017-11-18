@@ -35,11 +35,13 @@ patch_request_class(app, 20 * 1024 * 1024)
 # Celery Config
 if 'DYNO' in os.environ:
     # Indicates Heroku environ
+    print('detected Heroku Deployment')
     debug = False
     app.config['CELERY_BROKER_URL'] = os.environ.get('RABBITMQ_BIGWIG_URL', 'amqp://') #redis?
     app.config['CELERY_RESULT_BACKEND'] = os.environ.get('RABBITMQ_BIGWIG_URL', 'amqp') #redis?
 else:
     #Local Dev
+    print("detected Local Deploy")
     debug = True
     app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'amqp://') #redis?
     app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'amqp') #redis?
