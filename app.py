@@ -1,3 +1,4 @@
+#Karaokio CDG-2-MP4 Flask App
 #Flask Webframework
 from flask import Flask, g, render_template, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
