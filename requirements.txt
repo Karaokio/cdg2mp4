@@ -1,5 +1,8 @@
+amqp==2.2.2
 appnope==0.1.0
+billiard==3.5.0.3
 blinker==1.4
+celery==4.1.0
 click==6.7
 decorator==4.1.2
 Flask==0.12.2
@@ -11,6 +14,7 @@ ipython-genutils==0.2.0
 itsdangerous==0.24
 jedi==0.11.0
 Jinja2==2.10
+kombu==4.1.0
 MarkupSafe==1.0
 parso==0.1.0
 pexpect==4.2.1
@@ -18,10 +22,12 @@ pickleshare==0.7.4
 prompt-toolkit==1.0.15
 ptyprocess==0.5.2
 Pygments==2.2.0
+pytz==2017.3
 raven==6.3.0
 simplegeneric==0.8.1
 six==1.11.0
 traitlets==4.3.2
+vine==1.1.4
 wcwidth==0.1.7
 Werkzeug==0.12.2
 WTForms==2.1
