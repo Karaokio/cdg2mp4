@@ -1,6 +1,6 @@
 #Karaokio CDG-2-MP4 Flask App
 #Flask Webframework
-from flask import Flask, g, render_template, redirect, url_for, jsonify
+from flask import Flask, g, render_template, redirect, url_for, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from flask_uploads import UploadSet, patch_request_class, configure_uploads
 from flask_wtf import FlaskForm
@@ -29,6 +29,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cdg_key_secret_time')
 # File Uploads Settings
 ZIPS = ('zip')
 app.config['UPLOADED_ZIPS_DEST'] = 'media'
+app.config['UPLOADED_ZIPS_URL'] = "/videos/"
 zips = UploadSet('zips', ZIPS)
 configure_uploads(app, zips)
 patch_request_class(app, 20 * 1024 * 1024)
@@ -63,7 +64,12 @@ sentry = Sentry(app) # dsn=SENTRY_DSN (env)
 # 2) or generic Message:
 # sentry.captureMessage('hello, world!')
 
-
+# Custom static data
+@app.route('/videos/<path:filename>')
+def custom_static(filename):
+    if filename.startswith('media/'):
+        return send_from_directory('.', filename)
+    return redirect(url_for('upload'))
 
 class UploadForm(FlaskForm):
     cdg_zip = FileField(validators=[FileAllowed(zips, u'Zip files only!'), FileRequired(u'File was empty!')])
@@ -76,9 +82,7 @@ def upload():
         dir_id = secrets.token_hex()
         filename = zips.save(form.cdg_zip.data, folder=dir_id)
         file_url = zips.url(filename)
-        task = process_files.apply_async(
-            (os.path.join(app.config['UPLOADED_ZIPS_DEST'], dir_id),
-            os.path.join(app.config['UPLOADED_ZIPS_DEST'],filename)))
+        task = process_files.apply_async((os.path.join(app.config['UPLOADED_ZIPS_DEST'], dir_id), os.path.join(app.config['UPLOADED_ZIPS_DEST'],filename) ))
         print("Starting...:", dir_id, filename, file_url, task.id)
         return redirect(url_for('show_fileset', fileset_id=dir_id, task_id=task.id))
 
@@ -114,6 +118,8 @@ def taskstatus(task_id):
         }
         if 'result' in task.info:
             response['result'] = task.info['result']
+        if 'video_url' in task.info:
+            response['video_url'] = zips.url(task.info['video_url'])
     else:
         # something went wrong in the background job
         response = {
@@ -218,7 +224,7 @@ def process_files(self, work_dir_id=None, zipfile_path=None):
     #TODO: optionally send off email
 
     print("Done!", k.mp4)
-    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion completed!',
+    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
             'video_url': k.mp4,
             'result': 42}
 

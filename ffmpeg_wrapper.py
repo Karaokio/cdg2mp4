@@ -99,7 +99,7 @@ class KaraokeConverter:
         try:
             #TODO: consider doing this in a loop to gather/parse stdout progress
             self.mp4 = os.path.splitext(self.cdg)[0] + '.mp4'
-            proc = subprocess.run(["ffmpeg", '-i', self.cdg, '-i', self.mp3, '-f', 'mp4', self.mp4 ], stdout=subprocess.PIPE)
+            proc = subprocess.run(["ffmpeg", '-i', self.cdg, '-i', self.mp3, '-s', '640x480', '-r', '30', '-f', 'mp4', self.mp4 ], stdout=subprocess.PIPE)
             if proc.returncode == 0 and os.path.exists(self.mp4):
                 print('ffmpeg conversion commplete: %s' % self.mp4)
                 return True

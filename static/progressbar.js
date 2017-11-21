@@ -32,13 +32,16 @@ function update_progress(status_url, nanobar, status_div) {
             var percent = parseInt(data['current'] * 100 / data['total']);
             nanobar.go(percent);
             // TODO adjust childNodes
-            status_div.textContent = percent + '%';
+            status_div.textContent = data['status'] + ' ' + percent + '%';
 
             if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
-                // if ('result' in data) {
-                //     // show result
-                //     $(status_div.childNodes[3]).text('Result: ' + data['result']);
-                // }
+                if ('video_url' in data) {
+                    var video_tag ='<video controls="" class="embed-responsive-item shadow_box">\
+                    <source src="' + data['video_url'] + '" type="video/mp4">\
+                    Your browser does not support the video tag.\
+                    </video>';
+                    status_div.innerHTML = video_tag;
+                }
                 // else {
                 //     // something unexpected happened
                 //     $(status_div.childNodes[3]).text('Result: ' + data['state']);
@@ -47,6 +50,7 @@ function update_progress(status_url, nanobar, status_div) {
                 //TODO: Upon Completion Display Converted video and options to DL.
                 //TODO: refer to Karaokio.com or Youtube Uploader
                 //TODO: refer to karaokio-version for more songs!
+
             }
             else {
                 // rerun in 2 seconds

@@ -117,6 +117,10 @@ li {
     box-shadow: 5px 5px 10px #c3c3c3;
 }
 
+.shadow_box {
+    box-shadow: 0px 1px 10px #0000008f;
+}
+
 a {
     color: #fff;
 }
