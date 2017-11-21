@@ -73,23 +73,26 @@ class UploadForm(FlaskForm):
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
-        id = secrets.token_hex()
-        filename = zips.save(form.cdg_zip.data, folder=id)
+        dir_id = secrets.token_hex()
+        filename = zips.save(form.cdg_zip.data, folder=dir_id)
         file_url = zips.url(filename)
-        return redirect(url_for('show_fileset', fileset_id=id))
+        task = process_files.apply_async(
+            (os.path.join(app.config['UPLOADED_ZIPS_DEST'], dir_id),
+            os.path.join(app.config['UPLOADED_ZIPS_DEST'],filename)))
+        print("Starting...:", dir_id, filename, file_url, task.id)
+        return redirect(url_for('show_fileset', fileset_id=dir_id, task_id=task.id))
 
     return render_template('index.html', form=form)
 
-@app.route('/video/<fileset_id>')
-def show_fileset(fileset_id):
+@app.route('/video/<fileset_id>/<task_id>')
+def show_fileset(fileset_id, task_id):
     # show the post with the given id, the id is an integer
 
-    # Kick off Celery Task
-    task = process_files.apply_async()
-    print(task)
-    print(task.id)
+    # Celery task was kicked off by successful upload of zip.
+    # This is simply a status page to serve html+js to update progress
+    print("Show ProgressPage ...:", fileset_id, task_id)
 
-    return render_template('video_detail.html', fileset_id=fileset_id, task_id=task.id)
+    return render_template('video_detail.html', fileset_id=fileset_id, task_id=task_id)
 
 @app.route('/status/<task_id>')
 def taskstatus(task_id):
@@ -155,21 +158,68 @@ def test_ffmpeg():
     return "ffmpeg ready."
 
 @celery.task(bind=True)
-def process_files(self):
+def process_files(self, work_dir_id=None, zipfile_path=None):
+    print("In Process Files")
     """Background task that runs a long function with status updatws."""
     verb = ['Starting up', 'Checking Files', 'Unzipping', 'Converting', 'Finalizing']
     message = ''
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0}...'.format(random.choice(verb))
-        print("updating... message")
-        # TODO: Call Karaokio
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total,
-                                'status': message})
-        time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
+    total = 100
+
+    print("Info:", work_dir_id, zipfile_path)
+    k = KaraokeConverter(work_dir_id=work_dir_id, zipfile_path=zipfile_path)
+
+    if not zipfile_path:
+        return {'current': 100, 'total': total, 'status': 'Error: No CDG.zip File specified.',
+                'result': 500}
+
+    if not k.check_ffmpeg():
+        return {'current': 100, 'total': total, 'status': 'Error: Failed starting ffmpeg. Please try again later.',
+                'result': 500}
+
+    message = "ffmpeg binary configured"
+    self.update_state(state='PROGRESS',
+                      meta={'current': 10, 'total': total,
+                            'status': message})
+
+    message = "Starting Karaoke Convertor..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 15, 'total': total,
+                            'status': message})
+
+    if not k.test_zip():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error processing Zip Archive contents.',
+                'result': 500}
+
+
+    message = "Unzipping Zipfile..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 20, 'total': total,
+                            'status': message})
+
+    if not k.unzip_archive():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error: Failed unzipping Zip Archive contents.',
+                'result': 500}
+
+    message = "Converting CDG File to MP4..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 40, 'total': total,
+                            'status': message})
+
+    if not k.convert_to_mp4():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error: Failed converting Karaoke Files.',
+                'result': 500}
+
+    #TODO: launch another meta-data processing
+    #TODO: notify other APIs
+    #TODO: optionally upload to another server (or Youtube, Bitchute, etc)
+    #TODO: optionally send off email
+
+    print("Done!", k.mp4)
+    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion completed!',
+            'video_url': k.mp4,
             'result': 42}
 
 

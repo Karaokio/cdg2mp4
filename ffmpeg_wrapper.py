@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 class KaraokeConverter:
-    def __init__(self, zipfile_path=None):
+    def __init__(self, work_dir_id=None, zipfile_path=None):
         self.tempdir = None
         self.zip = None
         self.mp3 = None
@@ -13,6 +13,11 @@ class KaraokeConverter:
         self.mp4 = None
 
         self.status = None
+
+        if zipfile_path:
+            self.set_zip(zipfile_path)
+            self.tempdir = work_dir_id
+            #TODO: verify
 
     def create_tempdir(self):
         # If tempdir is already created... use it.
@@ -53,8 +58,10 @@ class KaraokeConverter:
 
         for f in file_list:
             if os.path.splitext(f)[1] in ['.cdg']:
+                print("Found CDG: ", os.path.join(self.tempdir, f))
                 self.cdg = os.path.join(self.tempdir, f)
             elif os.path.splitext(f)[1] in ['.mp3']:
+                print("Found MP3: ", os.path.join(self.tempdir, f))
                 self.mp3 = os.path.join(self.tempdir, f)
             else:
                 print("Unsupported file format in Zipfile: %s" % f)
@@ -84,13 +91,14 @@ class KaraokeConverter:
 
     def convert_to_mp4(self):
         print("Converting Karaoke Video Files...")
-        if not self.check_ffmpeg:
+        if not self.check_ffmpeg():
             print("Error with ffmpeg.")
             return False
 
         # subprocess call/check
         try:
-            self.mp4 = os.path.join(self.tempdir, os.path.splitext(self.cdg)[0] + '.mp4')
+            #TODO: consider doing this in a loop to gather/parse stdout progress
+            self.mp4 = os.path.splitext(self.cdg)[0] + '.mp4'
             proc = subprocess.run(["ffmpeg", '-i', self.cdg, '-i', self.mp3, '-f', 'mp4', self.mp4 ], stdout=subprocess.PIPE)
             if proc.returncode == 0 and os.path.exists(self.mp4):
                 print('ffmpeg conversion commplete: %s' % self.mp4)
