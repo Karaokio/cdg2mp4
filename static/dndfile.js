@@ -13,21 +13,17 @@ function readURL(input) {
       //console.log(e.target.result);
     };
     reader.readAsDataURL(input.files[0]);
-
-    //getSignedRequest(input.files[0]);
   }
 }
 
 function acceptFile(input) {
   // read the url, grab the filename, display in box
-  console.log('accepting file');
   if (input.files && input.files[0]) {
     getSignedRequest(input.files[0]);
   }
 }
 
 function getSignedRequest(file){
-  console.log("signing s3");
   var xhr = new XMLHttpRequest();
   xhr.open("GET", "/sign_s3?file_name="+file.name+"&file_type="+file.type);
   xhr.onreadystatechange = function(){
@@ -45,7 +41,6 @@ function getSignedRequest(file){
 }
 
 function uploadFile(file, s3Data, url){
-  console.log("performing upload");
   var xhr = new XMLHttpRequest();
   xhr.open("POST", s3Data.url);
 
