@@ -1,6 +1,6 @@
 #Karaokio CDG-2-MP4 Flask App
 #Flask Webframework
-from flask import Flask, g, render_template, redirect, url_for, jsonify, send_from_directory
+from flask import Flask, g, render_template, redirect, url_for, jsonify, send_from_directory, request
 from werkzeug.utils import secure_filename
 from flask_uploads import UploadSet, patch_request_class, configure_uploads
 from flask_wtf import FlaskForm
@@ -17,7 +17,8 @@ from ffmpeg_wrapper import KaraokeConverter
 from raven.contrib.flask import Sentry
 
 #Other
-import os, time, random
+import os, time, random, json
+import boto3
 import secrets
 
 
@@ -63,6 +64,32 @@ sentry = Sentry(app) # dsn=SENTRY_DSN (env)
 #     sentry.captureException()
 # 2) or generic Message:
 # sentry.captureMessage('hello, world!')
+
+# Sign s3 file for upload to bucket
+@app.route('/sign_s3/')
+def sign_s3():
+  S3_BUCKET = os.environ.get('CDG_AWS_STORAGE_BUCKET_NAME')
+
+  file_name = request.args.get('file_name')
+  file_type = request.args.get('file_type')
+
+  s3 = boto3.client('s3')
+
+  presigned_post = s3.generate_presigned_post(
+    Bucket = S3_BUCKET,
+    Key = file_name,
+    Fields = {"acl": "public-read", "Content-Type": file_type},
+    Conditions = [
+      {"acl": "public-read"},
+      {"Content-Type": file_type}
+    ],
+    ExpiresIn = 3600
+  )
+
+  return json.dumps({
+    'data': presigned_post,
+    'url': 'https://%s.s3.amazonaws.com/%s' % (S3_BUCKET, file_name)
+  })
 
 # Custom static data
 @app.route('/videos/<path:filename>')
