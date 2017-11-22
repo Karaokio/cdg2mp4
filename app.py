@@ -309,8 +309,7 @@ def process_file_from_url(self, file_url, dir_id):
     S3_BUCKET = os.environ.get('CDG_AWS_STORAGE_BUCKET_NAME')
     s3 = boto3.client('s3')
     s3.upload_file(k.mp4, S3_BUCKET, os.path.join(dir_id, os.path.basename(k.mp4)))
-    s3_url_mp4 = s3.generate_presigned_url('get_object', Params = {'Bucket': S3_BUCKET, 'Key': os.path.join(dir_id, os.path.basename(k.mp4))}, ExpiresIn = 0)
-
+    s3_url_mp4 = s3.generate_presigned_url('get_object', Params = {'Bucket': S3_BUCKET, 'Key': os.path.join(dir_id, os.path.basename(k.mp4)),})
     print("Done!", k.mp4)
     return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
             'video_url': s3_url_mp4,
