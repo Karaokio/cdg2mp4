@@ -289,6 +289,7 @@ def process_file_from_url(self, file_url, dir_id):
                             'status': message})
 
     if not k.convert_to_mp4():
+        print("Failed to convert")
         k.destroy_tempdir()
         return {'current': 100, 'total': total, 'status': 'Error: Failed converting Karaoke Files.',
                 'result': 500}
