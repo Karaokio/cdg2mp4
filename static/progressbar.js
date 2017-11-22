@@ -36,7 +36,7 @@ function update_progress(status_url, nanobar, status_div) {
 
             if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
                 if ('video_url' in data) {
-                    var video_tag ='<video controls="" class="embed-responsive-item shadow_box">\
+                    var video_tag ='<video loop autoplay controls="true" width='100%' height='100%' class="embed-responsive-item shadow_box">\
                     <source src="' + data['video_url'] + '" type="video/mp4">\
                     Your browser does not support the video tag.\
                     </video>';
