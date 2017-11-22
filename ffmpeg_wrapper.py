@@ -103,6 +103,7 @@ class KaraokeConverter:
             proc = subprocess.run(["ffmpeg", '-i', self.cdg, '-i', self.mp3, '-s', '640x480', '-r', '30', '-acodec', 'copy', '-vcodec', 'libx264', '-f', 'mp4', self.mp4 ], stdout=subprocess.PIPE)
             if proc.returncode == 0 and os.path.exists(self.mp4):
                 print('ffmpeg conversion complete: %s' % self.mp4)
+                # Upload the file to S3
                 return True
             else:
                 print("Conversion Failed")

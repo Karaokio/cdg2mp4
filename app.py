@@ -300,6 +300,14 @@ def process_file_from_url(self, file_url, dir_id):
     #TODO: optionally send off email
 
     # TODO: save new files back to S3
+    message = "Saving converted video..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 50, 'total': total,
+                            'status': message})
+
+    S3_BUCKET = os.environ.get('CDG_AWS_STORAGE_BUCKET_NAME')
+    s3 = boto3.client('s3')
+    s3.upload_file(k.mp4, 'S3_BUCKET', os.path.join(dir_ir, os.path.basename(k.mp4)))
 
     print("Done!", k.mp4)
     return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
