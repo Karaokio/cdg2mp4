@@ -17,6 +17,8 @@ from ffmpeg_wrapper import KaraokeConverter
 from raven.contrib.flask import Sentry
 
 #Other
+import urllib.request
+from urllib.parse import quote
 import os, time, random, json
 import boto3
 import secrets
@@ -75,9 +77,11 @@ def sign_s3():
 
   s3 = boto3.client('s3')
 
+  dir_id = secrets.token_hex()
+
   presigned_post = s3.generate_presigned_post(
     Bucket = S3_BUCKET,
-    Key = file_name,
+    Key = os.path.join(dir_id, file_name),
     Fields = {"acl": "public-read", "Content-Type": file_type},
     Conditions = [
       {"acl": "public-read"},
@@ -88,7 +92,8 @@ def sign_s3():
 
   return json.dumps({
     'data': presigned_post,
-    'url': 'https://%s.s3.amazonaws.com/%s' % (S3_BUCKET, file_name)
+    'url': 'https://%s.s3.amazonaws.com/%s' % (S3_BUCKET, os.path.join(dir_id, file_name)),
+    'dir_id': dir_id,
   })
 
 # Custom static data
@@ -115,9 +120,29 @@ def upload():
 
     return render_template('index.html', form=form)
 
+@app.route('/convert', methods=['GET', 'POST'])
+def start_conversion():
+    if request.method == 'POST':
+        file_url = request.json.get('zip_url', None)
+        dir_id = request.json.get('dir_id', None)
+
+        if not file_url or not dir_id:
+            return json.dumps({'task_id': None,})
+
+        task = process_file_from_url.apply_async((file_url, dir_id))
+
+        return json.dumps({'task_id': task.id, 'file_url': file_url, 'dir_id': dir_id, })
+
+    return json.dumps({'task_id': None,})
+
 @app.route('/video/<fileset_id>/<task_id>')
 def show_fileset(fileset_id, task_id):
     # show the post with the given id, the id is an integer
+
+    # File should already be uploaded to s3
+    # ## check if avaible to download, if not... redirect to index
+
+    # else, download
 
     # Celery task was kicked off by successful upload of zip.
     # This is simply a status page to serve html+js to update progress
@@ -189,6 +214,97 @@ def test_ffmpeg():
         return "ffmpeg error."
 
     return "ffmpeg ready."
+
+@celery.task(bind=True)
+def process_file_from_url(self, file_url, dir_id):
+    print("In Process Files")
+    """Background task that runs a long function with status updatws."""
+    verb = ['Starting up', 'Checking Files', 'Unzipping', 'Converting', 'Finalizing']
+    message = ''
+    total = 100
+
+    # TODO set/download zip from URL
+    message = "Configuring Karaoke Converter..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 5, 'total': total,
+                            'status': message})
+
+    print("Info:", file_url, dir_id)
+
+    # Download the file from `url` and save it locally under `file_name`:
+    work_dir = os.path.join('media', dir_id)
+    zipfile_path = os.path.join(work_dir, "%s.zip" % dir_id)
+
+    if not os.path.exists(work_dir):
+        os.makedirs( work_dir);
+
+    with urllib.request.urlopen(quote(file_url, safe=':/?*=\'')) as response, open(zipfile_path, 'wb') as out_file:
+        data = response.read() # a `bytes` object
+        out_file.write(data)
+
+    k = KaraokeConverter(work_dir_id=work_dir, zipfile_path=zipfile_path)
+
+    if not zipfile_path:
+        return {'current': 100, 'total': total, 'status': 'Error: No CDG.zip File specified.',
+                'result': 500}
+
+    message = "Retrieved Files..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 10, 'total': total,
+                            'status': message})
+
+    if not k.check_ffmpeg():
+        return {'current': 100, 'total': total, 'status': 'Error: Failed starting ffmpeg. Please try again later.',
+                'result': 500}
+
+    message = "ffmpeg binary configured"
+    self.update_state(state='PROGRESS',
+                      meta={'current': 15, 'total': total,
+                            'status': message})
+
+    message = "Starting Karaoke Convertor..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 20, 'total': total,
+                            'status': message})
+
+    if not k.test_zip():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error processing Zip Archive contents.',
+                'result': 500}
+
+
+    message = "Unzipping Zipfile..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 25, 'total': total,
+                            'status': message})
+
+    if not k.unzip_archive():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error: Failed unzipping Zip Archive contents.',
+                'result': 500}
+
+    message = "Converting CDG File to MP4..."
+    self.update_state(state='PROGRESS',
+                      meta={'current': 40, 'total': total,
+                            'status': message})
+
+    if not k.convert_to_mp4():
+        k.destroy_tempdir()
+        return {'current': 100, 'total': total, 'status': 'Error: Failed converting Karaoke Files.',
+                'result': 500}
+
+    #TODO: launch another meta-data processing
+    #TODO: notify other APIs
+    #TODO: optionally upload to another server (or Youtube, Bitchute, etc)
+    #TODO: optionally send off email
+
+    # TODO: save new files back to S3
+
+    print("Done!", k.mp4)
+    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
+            'video_url': k.mp4,
+            'result': 42}
+
 
 @celery.task(bind=True)
 def process_files(self, work_dir_id=None, zipfile_path=None):
