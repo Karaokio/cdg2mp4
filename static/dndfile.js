@@ -25,7 +25,7 @@ function acceptFile(input) {
 
 function getSignedRequest(file){
   var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/sign_s3?file_name="+file.name+"&file_type="+file.type);
+  xhr.open("GET", "https://www.cdg2mp4.com/sign_s3?file_name="+file.name+"&file_type="+file.type);
   xhr.onreadystatechange = function(){
     if(xhr.readyState === 4){
       if(xhr.status === 200){
