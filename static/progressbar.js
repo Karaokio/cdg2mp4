@@ -39,8 +39,8 @@ function update_progress(status_url, nanobar, status_div) {
                     var video_tag ='<video loop autoplay controls="true" width="100%" height="100%" class="embed-responsive-item shadow_box">\
                     <source src="' + data['video_url'] + '" type="video/mp4">\
                     Your browser does not support the video tag.\
-                    </video>'\
-                    '<br><a class="textshadow" href="' + data['video_url'] + '">Download Video File</a>';
+                    </video>\
+                    <br><a class="textshadow" href="' + data['video_url'] + '">Download Video File</a>';
                     status_div.innerHTML = video_tag;
                 }
                 // else {
