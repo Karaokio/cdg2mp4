@@ -21,7 +21,7 @@ function acceptFile(input) {
    //document.getElementById('spinner').style.visibility = "hidden";
 
   if (input.files && input.files[0]) {
-    document.getElementById('spinner').style.visibility = "visible";
+    document.getElementById('spinner').innerHTML = '<i id="spinner" class="fa fa-spinner fa-spin fa-1x fa-fw"></i>';
     document.getElementById('spinner').parentElement.disabled = true;
     getSignedRequest(input.files[0]);
   }
@@ -38,7 +38,7 @@ function getSignedRequest(file){
       }
       else{
         alert("Could not get signed URL.");
-            document.getElementById('spinner').style.visibility = "hidden";
+            document.getElementById('spinner').innerHTML = "";
             document.getElementById('spinner').parentElement.disabled = false;
       }
     }
@@ -69,7 +69,7 @@ function uploadFile(file, s3Data, url, dir_id){
       }
       else{
         alert("Could not upload file.");
-        document.getElementById('spinner').style.visibility = "hidden";
+        document.getElementById('spinner').innerHTML = "";
         document.getElementById('spinner').parentElement.disabled = false;
       }
    }
@@ -106,7 +106,7 @@ function start_file_processing(zip_url, dir_id){
           }
           else{
             alert("Error: Could not start conversion.");
-            document.getElementById('spinner').style.visibility = "hidden";
+            document.getElementById('spinner').innerHTML = "";
             document.getElementById('spinner').parentElement.disabled = false;
           }
         }
