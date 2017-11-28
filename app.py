@@ -108,16 +108,8 @@ class UploadForm(FlaskForm):
     submit = SubmitField(u'Upload')
 
 @app.route('/', methods=['GET', 'POST'])
-def upload():
+def index():
     form = UploadForm()
-    if form.validate_on_submit():
-        dir_id = secrets.token_hex()
-        filename = zips.save(form.cdg_zip.data, folder=dir_id)
-        file_url = zips.url(filename)
-        task = process_files.apply_async((os.path.join(app.config['UPLOADED_ZIPS_DEST'], dir_id), os.path.join(app.config['UPLOADED_ZIPS_DEST'],filename) ))
-        print("Starting...:", dir_id, filename, file_url, task.id)
-        return redirect(url_for('show_fileset', fileset_id=dir_id, task_id=task.id))
-
     return render_template('index.html', form=form)
 
 @app.route('/convert', methods=['GET', 'POST'])
@@ -127,32 +119,49 @@ def start_conversion():
         dir_id = request.json.get('dir_id', None)
 
         if not file_url or not dir_id:
+            # TODO: return more error codes
             return json.dumps({'task_id': None,})
 
         task = process_file_from_url.apply_async((file_url, dir_id))
 
         return json.dumps({'task_id': task.id, 'file_url': file_url, 'dir_id': dir_id, })
 
+    # TODO: return more error codes
     return json.dumps({'task_id': None,})
 
-@app.route('/video/<fileset_id>/<task_id>')
-def show_fileset(fileset_id, task_id):
-    # show the post with the given id, the id is an integer
 
-    # File should already be uploaded to s3
-    # ## check if avaible to download, if not... redirect to index
+@app.route('/video/<fileset_id>/')
+def show_fileset(fileset_id):
+    task_id = request.args.get('task_id', None)
 
-    # else, download
+    # http://boto3.readthedocs.io/en/latest/reference/services/s3.html#S3.Client.upload_file
+    S3_BUCKET = os.environ.get('CDG_AWS_STORAGE_BUCKET_NAME')
+    s3 = boto3.client('s3')
+    s3_r= boto3.resource('s3')
+    bucket = s3_r.Bucket(S3_BUCKET)
+    dir_listing = {}
+    for file_obj in bucket.objects.filter(Prefix=fileset_id):
+        # Get the service client.
+        # Generate the URL to get 'key-name' from 'bucket-name'
+        url = s3.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': S3_BUCKET,
+                'Key': file_obj.key
+            }, ExpiresIn=60*60*24*7
+        )
+        # get file extention
+        ext = os.path.splitext(file_obj.key)[1][1:]
+        dir_listing['%s_file_url' % ext] = url
 
-    # Celery task was kicked off by successful upload of zip.
-    # This is simply a status page to serve html+js to update progress
-    print("Show ProgressPage ...:", fileset_id, task_id)
-
-    return render_template('video_detail.html', fileset_id=fileset_id, task_id=task_id)
+    return render_template('video_detail.html',
+            fileset_id=fileset_id, task_id=task_id,
+            mp4_file_url=dir_listing.get('mp4_file_url', None),
+            zip_file_url=dir_listing.get('zip_file_url', None) )
 
 @app.route('/status/<task_id>')
 def taskstatus(task_id):
-    task = process_files.AsyncResult(task_id)
+    task = process_file_from_url.AsyncResult(task_id)
     if task.state == 'PENDING':
         # job did not start yet
         response = {
@@ -172,6 +181,11 @@ def taskstatus(task_id):
             response['result'] = task.info['result']
         if 'video_url' in task.info:
             response['video_url'] = task.info['video_url']
+        if 'mp4_file_url' in task.info:
+            response['mp4_file_url'] = task.info['mp4_file_url']
+        if 'zip_file_url' in task.info:
+            response['zip_file_url'] = task.info['zip_file_url']
+
     else:
         # something went wrong in the background job
         response = {
@@ -310,76 +324,36 @@ def process_file_from_url(self, file_url, dir_id):
     s3 = boto3.client('s3')
     s3.upload_file(k.mp4, S3_BUCKET, os.path.join(dir_id, os.path.basename(k.mp4)))
     s3_url_mp4 = s3.generate_presigned_url('get_object', Params = {'Bucket': S3_BUCKET, 'Key': os.path.join(dir_id, os.path.basename(k.mp4)),}, ExpiresIn=60*60*24*7)
-    print("Done!", k.mp4)
-    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
+
+
+    # List the files.
+    s3_r= boto3.resource('s3')
+    bucket = s3_r.Bucket(S3_BUCKET)
+    dir_listing = {}
+    for file_obj in bucket.objects.filter(Prefix=dir_id):
+        # Get the service client.
+        # Generate the URL to get 'key-name' from 'bucket-name'
+        url = s3.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': S3_BUCKET,
+                'Key': file_obj.key
+            }, ExpiresIn=60*60*24*7
+        )
+
+        # get file extention
+        ext = os.path.splitext(file_obj.key)[1][1:]
+        dir_listing['%s_file_url' % ext] = url
+
+    status_dict = {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
             'video_url': s3_url_mp4,
+            'session_id': dir_id,
             'result': 42}
 
-
-@celery.task(bind=True)
-def process_files(self, work_dir_id=None, zipfile_path=None):
-    print("In Process Files")
-    """Background task that runs a long function with status updatws."""
-    verb = ['Starting up', 'Checking Files', 'Unzipping', 'Converting', 'Finalizing']
-    message = ''
-    total = 100
-
-    print("Info:", work_dir_id, zipfile_path)
-    k = KaraokeConverter(work_dir_id=work_dir_id, zipfile_path=zipfile_path)
-
-    if not zipfile_path:
-        return {'current': 100, 'total': total, 'status': 'Error: No CDG.zip File specified.',
-                'result': 500}
-
-    if not k.check_ffmpeg():
-        return {'current': 100, 'total': total, 'status': 'Error: Failed starting ffmpeg. Please try again later.',
-                'result': 500}
-
-    message = "ffmpeg binary configured"
-    self.update_state(state='PROGRESS',
-                      meta={'current': 10, 'total': total,
-                            'status': message})
-
-    message = "Starting Karaoke Convertor..."
-    self.update_state(state='PROGRESS',
-                      meta={'current': 15, 'total': total,
-                            'status': message})
-
-    if not k.test_zip():
-        k.destroy_tempdir()
-        return {'current': 100, 'total': total, 'status': 'Error processing Zip Archive contents.',
-                'result': 500}
-
-
-    message = "Unzipping Zipfile..."
-    self.update_state(state='PROGRESS',
-                      meta={'current': 20, 'total': total,
-                            'status': message})
-
-    if not k.unzip_archive():
-        k.destroy_tempdir()
-        return {'current': 100, 'total': total, 'status': 'Error: Failed unzipping Zip Archive contents.',
-                'result': 500}
-
-    message = "Converting CDG File to MP4..."
-    self.update_state(state='PROGRESS',
-                      meta={'current': 40, 'total': total,
-                            'status': message})
-
-    if not k.convert_to_mp4():
-        k.destroy_tempdir()
-        return {'current': 100, 'total': total, 'status': 'Error: Failed converting Karaoke Files.',
-                'result': 500}
-
-    #TODO: launch another meta-data processing
-    #TODO: notify other APIs
-    #TODO: optionally upload to another server (or Youtube, Bitchute, etc)
-    #TODO: optionally send off email
+    status_dict.update(dir_listing)
 
     print("Done!", k.mp4)
-    return {'current': 100, 'total': 100, 'status': 'Karaoke Conversion complete!',
-            'video_url': k.mp4,
-            'result': 42}
+    return status_dict
 
 
 if __name__ == '__main__':

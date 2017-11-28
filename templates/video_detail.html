@@ -39,17 +39,32 @@
     <div class="row text-center">
         <div class="container progress-bar-container">
             <br>
+            {% if task_id %}
             <p class="progress-text">
                 <div id="status" class="status" data-taskid="{{task_id}}">
                 </div>
             </p>
             <div id="progress-bar" class="progbar"></div>
+            {% else %}
+                {% if mp4_file_url %}
+                    <video loop autoplay controls="true" width="100%" class="embed-responsive-item shadow_box">
+                    <source src="{{mp4_file_url}}" type="video/mp4">
+                    Your browser does not support the video tag.
+                    </video>
+                    <br>
+                    <div id="download_links" class="textshadow">
+                        <a class="textshadow" href="{{zip_file_url}}"><i class="fa fa-file-archive-o" aria-hidden="true"></i> Download Zip File</a>
+                        <a class="textshadow" style="padding-left: 30px;" href="{{mp4_file_url}}"><i class="fa fa-file-video-o" aria-hidden="true"></i> Download Video File</a>
+                    </div>
+                {% else %}
+                    Bad link. Video not found. Try converting the file again.
+                {% endif %}
+            {% endif %}
         </div>
     </div>
 
 
-
-<p>
+<p><p>
 
     <div class="row text-center">
             <div class="container">

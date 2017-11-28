@@ -99,7 +99,7 @@ function start_file_processing(zip_url, dir_id){
              // redirect to status page....
 
              if(data.task_id) {
-                 window.location.replace("/video/" + data.dir_id + '/' + data.task_id);
+                 window.location.replace("/video/" + data.dir_id + '?task_id=' + data.task_id);
              } else {
                  window.location.replace("/");
              }
