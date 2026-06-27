@@ -1,7 +1,9 @@
 # Karaokio · CDG-to-MP4 Converter
 
-Convert karaoke **CDG + MP3** files into shareable **MP4** videos — entirely in your
+Convert karaoke **CDG + MP3** files into shareable **MP4** videos, entirely in your
 browser. No upload, no server, no account. Works offline once loaded.
+
+![Karaokio CDG-to-MP4 converter](docs/screenshot.png)
 
 It's powered by [ffmpeg.wasm](https://ffmpegwasm.netlify.app/): the FFmpeg transcode that
 the old Flask/Celery/S3 backend used to run on a server now runs client-side in WebAssembly.
@@ -12,13 +14,13 @@ Your files never leave your machine.
 
 ## Stack
 
-- **React 19 + Vite 6 + TypeScript** — static SPA, no backend.
+- **React 19 + Vite 6 + TypeScript** is a static SPA, no backend.
 - **Tailwind v4** + the Karaokio design system (`src/styles/tokens/`, `src/components/ui/`).
-- **ffmpeg.wasm** single-thread `@ffmpeg/core` — copied into `public/ffmpeg/` at build time
+- **ffmpeg.wasm** single-thread `@ffmpeg/core`, copied into `public/ffmpeg/` at build time
   and served same-origin (offline-capable). Single-thread is deliberate: the multi-thread
   core deadlocks at x264 init, and single-thread needs no COOP/COEP cross-origin-isolation
   headers, which keeps deployment trivial.
-- **fflate** — in-browser unzip of the karaoke `.zip`.
+- **fflate** does in-browser unzip of the karaoke `.zip`.
 
 ## Develop
 
@@ -36,7 +38,7 @@ npm run preview
 
 ## Deploy
 
-Any static host. The build output in `dist/` is fully self-contained — no headers or
+Any static host. The build output in `dist/` is fully self-contained, with no headers or
 runtime required. Recommended: **Cloudflare Pages** (`build command: npm run build`,
 `output: dist`).
 
@@ -70,7 +72,7 @@ test/files/         self-generated, copyright-free sample.{cdg,mp3,zip} fixtures
 ## Test fixtures
 
 `test/files/sample.*` are generated from scratch and contain no copyrighted
-material — a hand-authored CDG color-bar test card (`scripts/make-sample-cdg.py`)
+material: a hand-authored CDG color-bar test card (`scripts/make-sample-cdg.py`)
 paired with a synthetic tone. Regenerate with:
 
 ```bash
