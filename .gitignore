@@ -164,3 +164,9 @@ dist/
 .vite/
 public/ffmpeg/
 *.tsbuildinfo
+
+# Test / CI
+coverage/
+playwright-report/
+test-results/
+.playwright/

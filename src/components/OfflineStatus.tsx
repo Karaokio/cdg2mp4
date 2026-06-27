@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Tooltip } from "@/components/ui";
-import { CORE_JS_URL, CORE_WASM_URL } from "@/lib/coreUrls";
+import { CORE_JS_URL, CORE_WASM_GZ_URL } from "@/lib/coreUrls";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
-const CORE_URLS = [CORE_JS_URL, CORE_WASM_URL];
+const CORE_URLS = [CORE_JS_URL, CORE_WASM_GZ_URL];
 const CORE_CACHE = "ffmpeg-core";
-const CORE_WASM = CORE_WASM_URL;
+const CORE_WASM = CORE_WASM_GZ_URL;
 
 async function isCoreCached(): Promise<boolean> {
   if (!("caches" in window)) return false;
@@ -31,7 +31,16 @@ async function waitForCached(timeoutMs: number): Promise<boolean> {
 }
 
 const TrashIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className="h-3.5 w-3.5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
   </svg>
 );
@@ -62,7 +71,8 @@ export function OfflineStatus() {
 
   React.useEffect(() => {
     if (!supported) return;
-    void refresh();
+    // Initial check — state is set from the async callback, not the effect body.
+    void isCoreCached().then(setCached);
     // The core also gets cached as a side effect of the first conversion, so
     // poll to reflect that without the user doing anything.
     const id = window.setInterval(refresh, 4000);
