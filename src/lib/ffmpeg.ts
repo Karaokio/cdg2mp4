@@ -1,12 +1,11 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
+import { CORE_JS_URL, CORE_WASM_URL } from "./coreUrls";
 
-// The single-thread core is copied into public/ffmpeg/ (see scripts/copy-ffmpeg-core.mjs)
-// so it is served same-origin and works offline. Single-thread avoids the core-mt
-// nested-worker deadlock and needs no COOP/COEP headers — see the gating spike.
-const base = import.meta.env.BASE_URL;
-const coreURL = `${base}ffmpeg/ffmpeg-core.js`;
-const wasmURL = `${base}ffmpeg/ffmpeg-core.wasm`;
+// The single-thread core is copied into public/ffmpeg/<version>/ (see
+// scripts/copy-ffmpeg-core.mjs) so it is served same-origin and works offline.
+// Single-thread avoids the core-mt nested-worker deadlock and needs no COOP/COEP
+// headers — see the gating spike.
 
 export type ProgressFn = (ratio: number) => void;
 export type LogFn = (line: string) => void;
@@ -22,8 +21,8 @@ export function loadFFmpeg(): Promise<FFmpeg> {
   loadPromise = (async () => {
     const instance = new FFmpeg();
     await instance.load({
-      coreURL: await toBlobURL(coreURL, "text/javascript"),
-      wasmURL: await toBlobURL(wasmURL, "application/wasm"),
+      coreURL: await toBlobURL(CORE_JS_URL, "text/javascript"),
+      wasmURL: await toBlobURL(CORE_WASM_URL, "application/wasm"),
     });
     return instance;
   })().catch((err) => {

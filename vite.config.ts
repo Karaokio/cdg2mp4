@@ -2,10 +2,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
+
+// Bake the installed @ffmpeg/core version into the build so the core is served
+// from a versioned URL (see src/lib/coreUrls.ts) — bumping the core then
+// invalidates the runtime cache instead of serving a stale wasm forever.
+const coreVersion: string = JSON.parse(
+  readFileSync(fileURLToPath(new URL("./node_modules/@ffmpeg/core/package.json", import.meta.url)), "utf8")
+).version;
 
 // Single-thread @ffmpeg/core (per gating spike) needs no COOP/COEP headers.
 export default defineConfig({
+  define: {
+    __FFMPEG_CORE_VERSION__: JSON.stringify(coreVersion),
+  },
   plugins: [
     react(),
     tailwindcss(),
