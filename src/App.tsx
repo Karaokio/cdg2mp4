@@ -1,6 +1,7 @@
 import { Converter } from "@/components/Converter";
 import { OfflineStatus } from "@/components/OfflineStatus";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { SocialLinks } from "@/components/SocialLinks";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -26,16 +27,31 @@ export default function App() {
           <InstallPrompt />
         </div>
 
-        <footer className="text-center text-sm text-text-muted">
-          Runs entirely in your browser · works offline · powered by{" "}
-          <a
-            className="text-brand-label underline"
-            href="https://ffmpegwasm.netlify.app/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            ffmpeg.wasm
-          </a>
+        <footer className="flex flex-col items-center gap-md text-center text-sm text-text-muted">
+          <p>
+            Runs entirely in your browser · works offline · powered by{" "}
+            <a
+              className="text-brand-label underline"
+              href="https://ffmpegwasm.netlify.app/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ffmpeg.wasm
+            </a>
+          </p>
+          <SocialLinks />
+          <p className="text-caption text-text-muted/70">
+            built by the robots at{" "}
+            <a
+              className="underline transition-colors hover:text-brand"
+              href="https://lilrobo.xyz"
+              target="_blank"
+              rel="noreferrer"
+            >
+              lilrobo.xyz
+            </a>{" "}
+            in sunny san diego
+          </p>
         </footer>
       </main>
     </div>
