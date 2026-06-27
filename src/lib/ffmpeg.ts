@@ -71,16 +71,24 @@ export async function convertCdgToMp4(
     await instance.writeFile("in.mp3", mp3);
 
     const code = await instance.exec([
-      "-i", "in.cdg",
-      "-i", "in.mp3",
-      "-r", "30",
+      "-i",
+      "in.cdg",
+      "-i",
+      "in.mp3",
+      "-r",
+      "30",
       // Upscale the low-res CDG with nearest-neighbor to keep the pixel-art look
       // crisp rather than blurry at higher resolutions.
-      "-vf", `scale=${size.replace("x", ":")}:flags=neighbor`,
-      "-c:v", "libx264",
-      "-preset", "veryfast",
-      "-pix_fmt", "yuv420p",
-      "-c:a", "aac",
+      "-vf",
+      `scale=${size.replace("x", ":")}:flags=neighbor`,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
       "-shortest",
       "out.mp4",
     ]);

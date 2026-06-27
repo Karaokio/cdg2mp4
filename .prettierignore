@@ -1,0 +1,11 @@
+dist
+coverage
+public/ffmpeg
+public/favicon
+playwright-report
+test-results
+package-lock.json
+docs
+test/files
+# Hand-aligned design-system token files — keep their formatting.
+src/styles/tokens
