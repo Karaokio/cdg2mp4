@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
+import { FeedbackPrompt } from "@/components/Feedback";
 import {
   trackConversionStarted,
   trackConversionSucceeded,
@@ -66,6 +67,7 @@ export function Converter() {
   const [error, setError] = React.useState("");
   const [result, setResult] = React.useState<{ url: string; name: string } | null>(null);
   const [dragging, setDragging] = React.useState(false);
+  const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
 
@@ -92,6 +94,7 @@ export function Converter() {
       const t0 = Date.now();
       let stage = "read";
       let name: string | undefined;
+      setLastInput(inputType);
       trackConversionStarted({ input_type: inputType, resolution });
       try {
         setPhase("Reading files…");
@@ -271,16 +274,20 @@ export function Converter() {
               </Button>
             </div>
           </div>
+          <FeedbackPrompt result="success" resolution={resolution} input_type={lastInput} />
         </div>
       )}
 
       {/* Error */}
       {status === "error" && (
-        <div
-          role="alert"
-          className="rounded-md border border-brand bg-brand-wash px-lg py-md text-base text-brand-strong"
-        >
-          {error}
+        <div className="flex flex-col gap-md">
+          <div
+            role="alert"
+            className="rounded-md border border-brand bg-brand-wash px-lg py-md text-base text-brand-strong"
+          >
+            {error}
+          </div>
+          <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
         </div>
       )}
     </Surface>
