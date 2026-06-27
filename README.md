@@ -7,7 +7,8 @@ browser. No upload, no server, no account. Works offline once loaded.
 
 It's powered by [ffmpeg.wasm](https://ffmpegwasm.netlify.app/): the FFmpeg transcode that
 the old Flask/Celery/S3 backend used to run on a server now runs client-side in WebAssembly.
-Your files never leave your machine.
+Your karaoke files are converted on your machine and never uploaded. (We do collect
+anonymous usage analytics to improve the tool, see [Privacy](#privacy).)
 
 > This app is also the reference implementation for the Karaokio platform stack:
 > **React + Vite + Tailwind v4** on the shared shadcn-style design system.
@@ -79,6 +80,20 @@ runtime required. Recommended: **Cloudflare Pages** (`build command: npm run bui
 3. `src/lib/ffmpeg.ts` runs:
    `ffmpeg -i in.cdg -i in.mp3 -r 30 -s 640x480 -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -shortest out.mp4`
 4. The MP4 is offered as an in-page preview and a download.
+
+## Privacy
+
+The conversion is 100% local: your karaoke **file contents are never uploaded** and there is
+no backend or account. The app does collect a little to help improve it:
+
+- **Anonymous product analytics** ([PostHog](https://posthog.com)): conversion events with
+  properties like resolution, input type, duration, and the **input file name** (the song),
+  never the file contents. No exact file sizes; bot traffic is filtered out.
+- **Feedback you choose to send** ([Tally](https://tally.so)): only what you type into the
+  feedback form, plus the build/context it was sent from.
+
+Both are off in development and only active when their keys are configured. See
+[`PRIVACY.md`](PRIVACY.md) for the full rundown.
 
 ## Project layout
 
