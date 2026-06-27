@@ -33,11 +33,37 @@ npm install
 npm run dev      # http://localhost:5173  (copies the ffmpeg core into public/ first)
 ```
 
-## Build & preview
+Note: the **service worker is disabled in dev** (`devOptions.enabled: false`), so the
+offline behavior and the "Available offline" pill do **not** work under `npm run dev`.
+Use the production preview below to test anything PWA related.
+
+## Build & preview (and how to test offline)
 
 ```bash
 npm run build    # type-checks, copies the core, bundles to dist/
+npm run preview  # serves the built app at http://localhost:4173 (service worker active)
+```
+
+To test offline support:
+
+1. Open http://localhost:4173 and convert a file once. The pill turns green
+   ("Available offline") as the ffmpeg core gets cached.
+2. In DevTools, go to **Network** and switch to **Offline** (or tick Offline under
+   **Application → Service Workers**), then reload. The app should still load and convert.
+3. **Clear** on the pill removes the cached core (~30MB) and the dot goes grey.
+
+Iterating gotcha: a service worker caches the previous build, so after re-running
+`npm run build`, tick **"Update on reload"** in DevTools → Application → Service Workers,
+or use **Clear site data**, to avoid serving stale files.
+
+### Testing install / on a phone
+
+`localhost` works for desktop, but installing the PWA or testing on a phone needs HTTPS.
+Either deploy it, or tunnel the preview to a temporary HTTPS URL:
+
+```bash
 npm run preview
+npx cloudflared tunnel --url http://localhost:4173   # open the https URL on your phone
 ```
 
 ## Deploy
