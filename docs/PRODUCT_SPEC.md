@@ -9,8 +9,8 @@ _Last reviewed: 2026-06-27._
 ## 1. What it is
 
 A single static web page that converts karaoke **CDG + MP3** files into an **MP4** video,
-entirely in the browser. No backend, no uploads, no account. The user's files never leave
-their device. Once loaded it works offline, and it can be installed like an app.
+entirely in the browser. No backend, no uploads, no account. The user's files are converted
+on-device and never uploaded. Once loaded it works offline, and it can be installed like an app.
 
 It is also the reference implementation for the Karaokio platform stack
 (React + Vite + Tailwind v4 on the shadcn-style design system).
@@ -128,8 +128,10 @@ Each feature lists acceptance criteria written as testable statements. `[unit]`,
 
 ## 6. Non-functional requirements
 
-- **Privacy:** no file or telemetry leaves the device; there is no backend and no analytics
-  network call during conversion. `[integration]`
+- **Privacy:** file contents never leave the device (conversion is fully local) and there is
+  no backend or account. The app does send anonymous product analytics (PostHog) and only the
+  feedback a user chooses to submit (Tally); both are off unless their keys are configured.
+  See `PRIVACY.md`. `[integration]`
 - **Performance:** a full song converts in roughly a minute at 1080p on typical hardware,
   faster at lower quality. First load downloads the ~31 MB core once. `[manual]`
 - **Offline:** after first load, reload and conversion work with no network. `[e2e]`

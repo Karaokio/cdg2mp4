@@ -43,7 +43,17 @@ export default function App() {
             </a>
           </p>
           <SocialLinks />
-          <FeedbackLink />
+          <div className="flex items-center gap-3">
+            <FeedbackLink />
+            <a
+              className="text-caption text-text-muted underline-offset-2 transition-colors hover:text-brand hover:underline"
+              href="https://github.com/Karaokio/cdg2mp4/blob/main/PRIVACY.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Privacy
+            </a>
+          </div>
           <p className="text-caption text-text-muted">
             built by the robots at{" "}
             <a
