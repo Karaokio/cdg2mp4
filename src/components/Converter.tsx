@@ -6,6 +6,15 @@ import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
 
 type Status = "idle" | "working" | "done" | "error";
 
+// CDG is low-res 4:3 pixel art; these keep that aspect ratio. Higher = sharper
+// but slower to encode in the browser.
+const RESOLUTIONS = {
+  "480p": "640x480",
+  "720p": "960x720",
+  "1080p": "1440x1080",
+} as const;
+type ResKey = keyof typeof RESOLUTIONS;
+
 const read = async (f: File) => new Uint8Array(await f.arrayBuffer());
 
 /** Turn dropped/selected files into a {cdg, mp3} pair (zip or loose files). */
@@ -17,17 +26,61 @@ async function filesToPair(files: File[]): Promise<CdgPair> {
   const mp3 = files.find((f) => f.name.toLowerCase().endsWith(".mp3"));
   if (cdg && mp3) return pairFromFiles(await read(cdg), await read(mp3), cdg.name);
 
-  throw new Error("Drop a karaoke .zip — or a matching .cdg and .mp3 together.");
+  throw new Error("Drop a karaoke .zip, or a matching .cdg and .mp3 together.");
+}
+
+/** Format a remaining-seconds estimate into calm, rounded copy. */
+function formatLeft(seconds: number): string {
+  if (!isFinite(seconds) || seconds <= 0) return "";
+  if (seconds < 60) return `about ${Math.max(5, Math.round(seconds / 5) * 5)}s left`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round((seconds % 60) / 15) * 15;
+  return s ? `about ${m}m ${s}s left` : `about ${m}m left`;
+}
+
+function ResolutionPicker({
+  value,
+  onChange,
+}: {
+  value: ResKey;
+  onChange: (r: ResKey) => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-md">
+      <Label tone="muted">Quality</Label>
+      <div className="inline-flex rounded-pill border border-border bg-surface p-[3px] shadow-subtle">
+        {(Object.keys(RESOLUTIONS) as ResKey[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={value === k}
+            onClick={() => onChange(k)}
+            className={cn(
+              "rounded-pill px-md py-[6px] font-marquee text-[11px] font-bold uppercase tracking-[.05em]",
+              "transition-colors duration-[80ms] ease-standard",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]",
+              value === k ? "bg-brand-wash text-brand" : "text-text-muted hover:text-text"
+            )}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function Converter() {
   const [status, setStatus] = React.useState<Status>("idle");
+  const [resolution, setResolution] = React.useState<ResKey>("1080p");
   const [progress, setProgress] = React.useState(0);
   const [phase, setPhase] = React.useState("");
+  const [eta, setEta] = React.useState(0);
   const [error, setError] = React.useState("");
   const [result, setResult] = React.useState<{ url: string; name: string } | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const startedAt = React.useRef<number | null>(null);
 
   // Revoke the object URL when it's replaced or the component unmounts.
   React.useEffect(() => {
@@ -42,6 +95,8 @@ export function Converter() {
       setResult(null);
       setError("");
       setProgress(0);
+      setEta(0);
+      startedAt.current = null;
       setStatus("working");
       try {
         setPhase("Reading files…");
@@ -49,9 +104,14 @@ export function Converter() {
 
         setPhase("Loading converter…");
         const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
+          size: RESOLUTIONS[resolution],
           onProgress: (r) => {
             setProgress(r);
             setPhase("Converting…");
+            // Estimate remaining time from the measured encode rate.
+            if (startedAt.current == null) startedAt.current = Date.now();
+            const elapsed = (Date.now() - startedAt.current) / 1000;
+            if (r > 0.03 && elapsed > 1.5) setEta((elapsed * (1 - r)) / r);
           },
         });
 
@@ -65,7 +125,7 @@ export function Converter() {
         setStatus("error");
       }
     },
-    [result]
+    [result, resolution]
   );
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,17 +143,13 @@ export function Converter() {
 
   const working = status === "working";
   const pct = Math.round(progress * 100);
+  const showPicker = status === "idle" || status === "error";
 
   return (
     <Surface className="flex flex-col gap-lg">
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".zip,.cdg,.mp3"
-        multiple
-        hidden
-        onChange={onPick}
-      />
+      <input ref={inputRef} type="file" accept=".zip,.cdg,.mp3" multiple hidden onChange={onPick} />
+
+      {showPicker && <ResolutionPicker value={resolution} onChange={setResolution} />}
 
       {/* Dropzone */}
       {status !== "done" && (
@@ -122,7 +178,7 @@ export function Converter() {
             <>
               <Spinner />
               <p className="font-body font-semibold text-base">{phase}</p>
-              {progress > 0 && (
+              {progress > 0 ? (
                 <div className="w-full max-w-[360px]">
                   <div className="h-2 w-full overflow-hidden rounded-pill bg-background-sunken">
                     <div
@@ -130,8 +186,12 @@ export function Converter() {
                       style={{ width: `${Math.max(pct, 4)}%` }}
                     />
                   </div>
-                  <p className="mt-sm font-mono text-sm text-text-muted">{pct}%</p>
+                  <p className="mt-sm font-mono text-sm text-text-muted">
+                    {pct}%{eta > 0 ? ` · ${formatLeft(eta)}` : ""}
+                  </p>
                 </div>
+              ) : (
+                <p className="text-sm text-text-muted">Hang tight, this can take a moment.</p>
               )}
             </>
           ) : (
@@ -140,8 +200,9 @@ export function Converter() {
               <p className="font-display text-xl font-bold">Drag a karaoke .zip to convert</p>
               <p className="max-w-[42ch] text-base text-text-muted">
                 Or a matching <code className="font-mono">.cdg</code> and{" "}
-                <code className="font-mono">.mp3</code> together. Everything runs in your
-                browser — nothing is uploaded.
+                <code className="font-mono">.mp3</code> together.
+                <br />
+                It all runs right here in your browser.
               </p>
               <Button variant="primary" type="button" className="mt-sm">
                 Choose files
@@ -151,16 +212,19 @@ export function Converter() {
         </div>
       )}
 
+      {/* Expectation note (idle only) */}
+      {status === "idle" && (
+        <p className="text-center text-sm text-text-muted">
+          A typical song takes about a minute, a little longer at 1080p.
+          <br />
+          The first conversion is slower while the converter downloads.
+        </p>
+      )}
+
       {/* Result */}
       {status === "done" && result && (
         <div className="flex flex-col gap-lg">
-          <video
-            src={result.url}
-            controls
-            autoPlay
-            loop
-            className="w-full rounded-lg shadow-medium"
-          />
+          <video src={result.url} controls autoPlay loop className="w-full rounded-lg shadow-medium" />
           <div className="flex flex-wrap items-center justify-between gap-md">
             <div>
               <Label tone="muted">Ready</Label>
