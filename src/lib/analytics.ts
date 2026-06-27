@@ -34,7 +34,7 @@ export function track(event: string, props?: Props): void {
   posthog.capture(event, props);
 }
 
-export type InputType = "zip" | "loose";
+export type InputType = "zip" | "pair"; // a .zip, or a loose .cdg + .mp3 file pair
 
 export const trackConversionStarted = (p: { input_type: InputType; resolution: string }) =>
   track("conversion_started", p);
@@ -44,7 +44,7 @@ export const trackConversionSucceeded = (p: {
   resolution: string;
   duration_ms: number;
   output_mb_bucket: string;
-  source_name?: string; // the song base name (file contents never leave the device)
+  file_name?: string; // the input filename (file contents never leave the device)
 }) => track("conversion_succeeded", p);
 
 export const trackConversionFailed = (p: {
@@ -52,11 +52,11 @@ export const trackConversionFailed = (p: {
   resolution: string;
   stage: string;
   reason: string;
-  source_name?: string;
+  file_name?: string;
 }) => track("conversion_failed", p);
 
-/** The input's base name (the song), trimmed and length-capped for analytics. */
-export function songName(baseName: string | undefined): string | undefined {
+/** The input filename (base name, no extension), trimmed and length-capped. */
+export function fileName(baseName: string | undefined): string | undefined {
   const name = baseName?.trim();
   return name ? name.slice(0, 120) : undefined;
 }
