@@ -66,6 +66,7 @@ export function OfflineStatus() {
 
   const [cached, setCached] = React.useState(false);
   const [preparing, setPreparing] = React.useState(false);
+  const [devNote, setDevNote] = React.useState(false);
 
   const refresh = React.useCallback(async () => setCached(await isCoreCached()), []);
 
@@ -84,9 +85,29 @@ export function OfflineStatus() {
     };
   }, [supported, refresh]);
 
+  // Auto-dismiss the dev hint so it doesn't linger.
+  React.useEffect(() => {
+    if (!devNote) return;
+    const t = window.setTimeout(() => setDevNote(false), 7000);
+    return () => window.clearTimeout(t);
+  }, [devNote]);
+
   if (!supported) return null;
 
   const downloadForOffline = async () => {
+    // In dev the service worker is off (devOptions.enabled: false in vite.config.ts),
+    // so there's no runtime cache to save into — explain instead of silently failing.
+    if (import.meta.env.DEV) {
+      if (!devNote) {
+        console.warn(
+          "[cdg2mp4] Offline caching is disabled in dev (devOptions.enabled: false in " +
+            "vite.config.ts), so 'Save for offline' can't work here. Test it with a " +
+            "production build: `npm run build && npm run preview`."
+        );
+      }
+      setDevNote((shown) => !shown); // clicking again toggles the hint off
+      return;
+    }
     setPreparing(true);
     try {
       // Same-origin fetches flow through the service worker and populate the cache.
@@ -160,15 +181,49 @@ export function OfflineStatus() {
 
   // Not cached yet: invite the user to make it offline-ready.
   return (
-    <Tooltip label="Download the converter (~30 MB) so it works offline next time">
-      <button
-        type="button"
-        onClick={downloadForOffline}
-        className={cn(pill, "text-text-muted transition-colors hover:border-brand hover:text-text")}
-      >
-        <Dot className="bg-text-muted/50" />
-        Save for offline
-      </button>
-    </Tooltip>
+    <span className="relative inline-flex">
+      <Tooltip label="Download the converter (~30 MB) so it works offline next time">
+        <button
+          type="button"
+          onClick={downloadForOffline}
+          className={cn(
+            pill,
+            "text-text-muted transition-colors hover:border-brand hover:text-text"
+          )}
+        >
+          <Dot className="bg-text-muted/50" />
+          Save for offline
+        </button>
+      </Tooltip>
+      {devNote && (
+        <span
+          role="status"
+          className="absolute left-1/2 top-full z-20 mt-sm flex w-[260px] -translate-x-1/2 items-start gap-2 rounded-md border border-border bg-surface px-md py-sm text-caption leading-snug text-text-muted shadow-medium"
+        >
+          <span>
+            Offline caching is off in <span className="font-medium text-text">dev</span>. Test it
+            with <code className="font-mono">npm run build &amp;&amp; npm run preview</code>.
+          </span>
+          <button
+            type="button"
+            onClick={() => setDevNote(false)}
+            aria-label="Dismiss"
+            className="-mr-1 -mt-0.5 shrink-0 rounded-sm p-0.5 text-text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </span>
+      )}
+    </span>
   );
 }
