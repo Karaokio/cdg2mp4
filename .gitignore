@@ -39,8 +39,8 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -156,3 +156,11 @@ jspm_packages
 
 webpack-stats.json
 npm-debug.log
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+.vite/
+public/ffmpeg/
+*.tsbuildinfo

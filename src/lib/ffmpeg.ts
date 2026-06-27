@@ -1,0 +1,83 @@
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { toBlobURL } from "@ffmpeg/util";
+
+// The single-thread core is copied into public/ffmpeg/ (see scripts/copy-ffmpeg-core.mjs)
+// so it is served same-origin and works offline. Single-thread avoids the core-mt
+// nested-worker deadlock and needs no COOP/COEP headers — see the gating spike.
+const base = import.meta.env.BASE_URL;
+const coreURL = `${base}ffmpeg/ffmpeg-core.js`;
+const wasmURL = `${base}ffmpeg/ffmpeg-core.wasm`;
+
+export type ProgressFn = (ratio: number) => void;
+export type LogFn = (line: string) => void;
+
+let loadPromise: Promise<FFmpeg> | null = null;
+
+/** Lazily create and load a single shared FFmpeg instance. */
+export function loadFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
+  if (loadPromise) return loadPromise;
+  loadPromise = (async () => {
+    const instance = new FFmpeg();
+    if (onLog) instance.on("log", ({ message }) => onLog(message));
+    await instance.load({
+      coreURL: await toBlobURL(coreURL, "text/javascript"),
+      wasmURL: await toBlobURL(wasmURL, "application/wasm"),
+    });
+    return instance;
+  })();
+  return loadPromise;
+}
+
+/**
+ * Transcode a CDG (graphics) + MP3 (audio) pair into an MP4.
+ * Spike-verified command; `-pix_fmt yuv420p` is required for Safari/QuickTime
+ * playback and `-preset veryfast` keeps client-side encoding usable.
+ */
+export async function convertCdgToMp4(
+  cdg: Uint8Array,
+  mp3: Uint8Array,
+  opts: { size?: string; onProgress?: ProgressFn; onLog?: LogFn } = {}
+): Promise<Uint8Array> {
+  const instance = await loadFFmpeg(opts.onLog);
+  const size = opts.size ?? "1440x1080";
+
+  const onProgress = ({ progress }: { progress: number }) => {
+    // ffmpeg occasionally reports >1 near the end; clamp for the UI.
+    opts.onProgress?.(Math.min(Math.max(progress, 0), 1));
+  };
+  instance.on("progress", onProgress);
+
+  try {
+    await instance.writeFile("in.cdg", cdg);
+    await instance.writeFile("in.mp3", mp3);
+
+    const code = await instance.exec([
+      "-i", "in.cdg",
+      "-i", "in.mp3",
+      "-r", "30",
+      // Upscale the low-res CDG with nearest-neighbor to keep the pixel-art look
+      // crisp rather than blurry at higher resolutions.
+      "-vf", `scale=${size.replace("x", ":")}:flags=neighbor`,
+      "-c:v", "libx264",
+      "-preset", "veryfast",
+      "-pix_fmt", "yuv420p",
+      "-c:a", "aac",
+      "-shortest",
+      "out.mp4",
+    ]);
+    if (code !== 0) throw new Error(`ffmpeg exited with code ${code}`);
+
+    const data = (await instance.readFile("out.mp4")) as Uint8Array;
+    if (!data.length) throw new Error("ffmpeg produced an empty file");
+
+    // Clean up the virtual FS so repeat conversions start fresh.
+    await Promise.allSettled([
+      instance.deleteFile("in.cdg"),
+      instance.deleteFile("in.mp3"),
+      instance.deleteFile("out.mp4"),
+    ]);
+    return data;
+  } finally {
+    instance.off("progress", onProgress);
+  }
+}

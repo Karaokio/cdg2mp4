@@ -1,0 +1,108 @@
+/* =============================================================================
+   Karaokio — Semantic tokens
+   -----------------------------------------------------------------------------
+   The consumable API. Components and the Tailwind @theme map reference THESE,
+   never the raw --ko-* primitives. Swapping a theme or density only rewrites
+   this layer; primitives and components stay untouched.
+
+   - Theme  is set with   <html data-theme="light | dark">   (default light)
+   - Density is set with  <html data-density="comfortable | compact"> (default comfortable)
+     -> the consumer app runs comfortable; the operator console runs compact,
+        from the same primitives/components.
+   ============================================================================= */
+
+:root,
+[data-theme="light"] {
+  /* ---- Surfaces ---------------------------------------------------------- */
+  --background:        var(--ko-cream-100);
+  --background-sunken: var(--ko-cream-400);
+  --surface:           var(--ko-cream-50);
+  --surface-raised:    var(--ko-cream-50);
+  --border:            var(--ko-cream-300);
+
+  /* ---- Text -------------------------------------------------------------- */
+  --text:        var(--ko-ink-900);
+  --text-muted:  var(--ko-ink-500);
+  --text-onbrand: #FFFFFF;
+
+  /* ---- Brand ------------------------------------------------------------- */
+  --brand:          var(--ko-red-500);
+  --brand-strong:   var(--ko-red-700);
+  --brand-label:    var(--ko-red-600);
+  --brand-gradient: var(--ko-gradient-brand);
+  --brand-wash:     var(--ko-red-50);
+
+  /* ---- Status ------------------------------------------------------------ */
+  --status-live:      var(--ko-red-500);
+  --status-spotlight: var(--ko-amber-500);
+  --status-success:   var(--ko-green-500);
+
+  /* ---- Interaction ------------------------------------------------------- */
+  --focus-ring: var(--ko-red-500);
+
+  /* ---- Elevation (semantic; theme-aware) --------------------------------- */
+  --elevation-subtle: var(--ko-elevation-subtle);
+  --elevation-medium: var(--ko-elevation-medium);
+  --elevation-strong: var(--ko-elevation-strong);
+  --elevation-brand:  var(--ko-elevation-brand);
+}
+
+[data-theme="dark"] {
+  /* ---- Surfaces (recovered "stage" palette) ------------------------------ */
+  --background:        var(--ko-stage-900);
+  --background-sunken: var(--ko-stage-950);
+  --surface:           var(--ko-stage-800);
+  --surface-raised:    var(--ko-stage-700);
+  --border:            var(--ko-stage-600);
+
+  /* ---- Text -------------------------------------------------------------- */
+  --text:        var(--ko-paper-50);
+  --text-muted:  var(--ko-paper-300);
+  --text-onbrand: #FFFFFF;
+
+  /* ---- Brand (red holds; label/spotlight brighten for dark) -------------- */
+  --brand:          var(--ko-red-500);
+  --brand-strong:   var(--ko-red-700);
+  --brand-label:    var(--ko-amber-300);
+  --brand-gradient: var(--ko-gradient-brand);
+  --brand-wash:     rgba(217, 35, 52, 0.14);
+
+  /* ---- Status ------------------------------------------------------------ */
+  --status-live:      var(--ko-red-500);
+  --status-spotlight: var(--ko-amber-300);
+  --status-success:   var(--ko-green-400);
+
+  /* ---- Interaction ------------------------------------------------------- */
+  --focus-ring: var(--ko-amber-300);
+
+  /* ---- Elevation (deeper, neutral on dark) ------------------------------- */
+  --elevation-subtle: var(--ko-elevation-subtle-dark);
+  --elevation-medium: var(--ko-elevation-medium-dark);
+  --elevation-strong: var(--ko-elevation-strong-dark);
+  --elevation-brand:  var(--ko-elevation-brand-dark);
+}
+
+/* =============================================================================
+   Density — component-facing layout tokens.
+   Primitives/components don't fork; they read these. The console sets
+   data-density="compact" to tighten without a second design system.
+   ============================================================================= */
+
+:root,
+[data-density="comfortable"] {
+  --control-height: 44px;
+  --card-padding:   var(--ko-space-lg);   /* 16 */
+  --card-radius:    var(--ko-radius-lg);   /* 16 */
+  --section-gap:    var(--ko-space-xl);    /* 24 */
+  --page-gutter:    var(--ko-space-lg);    /* 16 */
+  --row-gap:        var(--ko-space-sm);    /*  8 */
+}
+
+[data-density="compact"] {
+  --control-height: 34px;
+  --card-padding:   var(--ko-space-md);    /* 12 */
+  --card-radius:    var(--ko-radius-md);    /* 12 */
+  --section-gap:    var(--ko-space-lg);     /* 16 */
+  --page-gutter:    var(--ko-space-md);     /* 12 */
+  --row-gap:        var(--ko-space-xs);     /*  4 */
+}

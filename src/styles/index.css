@@ -1,0 +1,45 @@
+/* Tailwind v4 + Karaokio design-system tokens.
+   Order matters: utilities first, then primitives → semantic → theme bridge. */
+@import "tailwindcss";
+@import "./tokens/primitives.css";
+@import "./tokens/semantic.css";
+@import "./tokens/theme.css";
+
+/* Component keyframes referenced by primitives (per design-system README). */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background-sunken);
+  color: var(--text);
+  font-family: var(--ko-font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
