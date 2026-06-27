@@ -69,6 +69,7 @@ export function InstallPrompt() {
       <button
         type="button"
         onClick={install}
+        title="Keep the converter on your device so it opens like an app and works offline"
         className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
       >
         <HomeIcon />
@@ -84,6 +85,7 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={() => setShowIosHint((v) => !v)}
+          title="Keep the converter on your device so it opens like an app and works offline"
           className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
         >
           <HomeIcon />
