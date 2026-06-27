@@ -66,6 +66,7 @@ export function OfflineStatus() {
 
   const [cached, setCached] = React.useState(false);
   const [preparing, setPreparing] = React.useState(false);
+  const [devNote, setDevNote] = React.useState(false);
 
   const refresh = React.useCallback(async () => setCached(await isCoreCached()), []);
 
@@ -87,6 +88,17 @@ export function OfflineStatus() {
   if (!supported) return null;
 
   const downloadForOffline = async () => {
+    // In dev the service worker is off (devOptions.enabled: false in vite.config.ts),
+    // so there's no runtime cache to save into — explain instead of silently failing.
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[cdg2mp4] Offline caching is disabled in dev (devOptions.enabled: false in " +
+          "vite.config.ts), so 'Save for offline' can't work here. Test it with a " +
+          "production build: `npm run build && npm run preview`."
+      );
+      setDevNote(true);
+      return;
+    }
     setPreparing(true);
     try {
       // Same-origin fetches flow through the service worker and populate the cache.
@@ -160,15 +172,29 @@ export function OfflineStatus() {
 
   // Not cached yet: invite the user to make it offline-ready.
   return (
-    <Tooltip label="Download the converter (~30 MB) so it works offline next time">
-      <button
-        type="button"
-        onClick={downloadForOffline}
-        className={cn(pill, "text-text-muted transition-colors hover:border-brand hover:text-text")}
-      >
-        <Dot className="bg-text-muted/50" />
-        Save for offline
-      </button>
-    </Tooltip>
+    <span className="relative inline-flex">
+      <Tooltip label="Download the converter (~30 MB) so it works offline next time">
+        <button
+          type="button"
+          onClick={downloadForOffline}
+          className={cn(
+            pill,
+            "text-text-muted transition-colors hover:border-brand hover:text-text"
+          )}
+        >
+          <Dot className="bg-text-muted/50" />
+          Save for offline
+        </button>
+      </Tooltip>
+      {devNote && (
+        <span
+          role="status"
+          className="absolute left-1/2 top-full z-20 mt-sm w-[260px] -translate-x-1/2 rounded-md border border-border bg-surface px-md py-sm text-caption leading-snug text-text-muted shadow-medium"
+        >
+          Offline caching is off in <span className="font-medium text-text">dev</span>. Test it with{" "}
+          <code className="font-mono">npm run build &amp;&amp; npm run preview</code>.
+        </span>
+      )}
+    </span>
   );
 }
