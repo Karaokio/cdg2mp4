@@ -4,6 +4,15 @@ import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
+import {
+  trackConversionStarted,
+  trackConversionSucceeded,
+  trackConversionFailed,
+  track,
+  mbBucket,
+  classifyError,
+  type InputType,
+} from "@/lib/analytics";
 
 type Status = "idle" | "working" | "done" | "error";
 
@@ -75,14 +84,23 @@ export function Converter() {
       setEta(0);
       startedAt.current = null;
       setStatus("working");
+
+      const inputType: InputType = files.some((f) => f.name.toLowerCase().endsWith(".zip"))
+        ? "zip"
+        : "loose";
+      const t0 = Date.now();
+      let stage = "read";
+      trackConversionStarted({ input_type: inputType, resolution });
       try {
         setPhase("Reading files…");
         const pair = await filesToPair(files);
 
+        stage = "load";
         setPhase("Loading converter…");
         const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
           size: resolutionToSize(resolution),
           onProgress: (r) => {
+            stage = "convert";
             setProgress(r);
             setPhase("Converting…");
             // Estimate remaining time from the measured encode rate.
@@ -97,9 +115,22 @@ export function Converter() {
         setResult({ url, name: `${pair.baseName}.mp4` });
         setProgress(1);
         setStatus("done");
+        trackConversionSucceeded({
+          input_type: inputType,
+          resolution,
+          duration_ms: Date.now() - t0,
+          output_mb_bucket: mbBucket(blob.size),
+        });
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        const message = e instanceof Error ? e.message : String(e);
+        setError(message);
         setStatus("error");
+        trackConversionFailed({
+          input_type: inputType,
+          resolution,
+          stage,
+          reason: classifyError(message),
+        });
       }
     },
     [result, resolution]
@@ -225,7 +256,11 @@ export function Converter() {
                 Convert another
               </Button>
               <Button asChild variant="primary">
-                <a href={result.url} download={result.name}>
+                <a
+                  href={result.url}
+                  download={result.name}
+                  onClick={() => track("download_clicked", { resolution })}
+                >
                   Download MP4
                 </a>
               </Button>

@@ -2,6 +2,7 @@ import * as React from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Tooltip } from "@/components/ui";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "@/lib/coreUrls";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
@@ -113,7 +114,9 @@ export function OfflineStatus() {
       // Same-origin fetches flow through the service worker and populate the cache.
       await Promise.all(CORE_URLS.map((u) => fetch(u, { cache: "reload" })));
       // Stay on "Saving…" until the cache actually reflects it, then flip to green.
-      setCached(await waitForCached(8000));
+      const ok = await waitForCached(8000);
+      setCached(ok);
+      if (ok) track("saved_for_offline");
     } catch {
       /* leave state as-is; the pill will simply stay on "Save for offline" */
     } finally {
@@ -124,6 +127,7 @@ export function OfflineStatus() {
   const clearOffline = async () => {
     await caches.delete(CORE_CACHE);
     await refresh();
+    track("offline_removed");
   };
 
   const pill =
@@ -136,7 +140,10 @@ export function OfflineStatus() {
       <Tooltip label="A newer version of the app is ready. Tap to reload into it.">
         <button
           type="button"
-          onClick={() => updateServiceWorker(true)}
+          onClick={() => {
+            track("update_applied");
+            updateServiceWorker(true);
+          }}
           className={cn(pill, "font-medium text-text transition-colors hover:border-brand")}
         >
           <Dot className="bg-spotlight" pulse />
