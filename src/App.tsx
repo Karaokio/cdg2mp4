@@ -1,6 +1,7 @@
 import { Converter } from "@/components/Converter";
 import { OfflineStatus } from "@/components/OfflineStatus";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { SocialLinks } from "@/components/SocialLinks";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -26,16 +27,19 @@ export default function App() {
           <InstallPrompt />
         </div>
 
-        <footer className="text-center text-sm text-text-muted">
-          Runs entirely in your browser · works offline · powered by{" "}
-          <a
-            className="text-brand-label underline"
-            href="https://ffmpegwasm.netlify.app/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            ffmpeg.wasm
-          </a>
+        <footer className="flex flex-col items-center gap-md text-center text-sm text-text-muted">
+          <SocialLinks />
+          <p>
+            Runs entirely in your browser · works offline · powered by{" "}
+            <a
+              className="text-brand-label underline"
+              href="https://ffmpegwasm.netlify.app/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ffmpeg.wasm
+            </a>
+          </p>
         </footer>
       </main>
     </div>
