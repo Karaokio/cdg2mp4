@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 // Not in the DOM lib types yet.
@@ -66,15 +67,16 @@ export function InstallPrompt() {
       setDeferred(null); // a prompt can only be used once
     };
     return (
-      <button
-        type="button"
-        onClick={install}
-        title="Keep the converter on your device so it opens like an app and works offline"
-        className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
-      >
-        <HomeIcon />
-        {label}
-      </button>
+      <Tooltip label="Keep the converter on your device so it opens like an app and works offline">
+        <button
+          type="button"
+          onClick={install}
+          className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
+        >
+          <HomeIcon />
+          {label}
+        </button>
+      </Tooltip>
     );
   }
 
@@ -85,7 +87,6 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={() => setShowIosHint((v) => !v)}
-          title="Keep the converter on your device so it opens like an app and works offline"
           className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
         >
           <HomeIcon />

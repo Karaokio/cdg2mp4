@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
@@ -99,15 +100,16 @@ export function OfflineStatus() {
   // Update available: amber, tap to reload into the new version.
   if (needRefresh) {
     return (
-      <button
-        type="button"
-        onClick={() => updateServiceWorker(true)}
-        title="A newer version of the app is ready. Tap to reload into it."
-        className={cn(pill, "font-medium text-text transition-colors hover:border-brand")}
-      >
-        <Dot className="bg-spotlight" pulse />
-        Update ready, tap to reload
-      </button>
+      <Tooltip label="A newer version of the app is ready. Tap to reload into it.">
+        <button
+          type="button"
+          onClick={() => updateServiceWorker(true)}
+          className={cn(pill, "font-medium text-text transition-colors hover:border-brand")}
+        >
+          <Dot className="bg-spotlight" pulse />
+          Update ready, tap to reload
+        </button>
+      </Tooltip>
     );
   }
 
@@ -123,35 +125,34 @@ export function OfflineStatus() {
   // Cached: green, fully usable offline. Offer to reclaim the space.
   if (cached) {
     return (
-      <span
-        className={cn(pill, "text-text")}
-        title="The converter is saved on this device and works with no internet."
-      >
+      <span className={cn(pill, "text-text")}>
         <Dot className="bg-success" />
         <span className="font-medium">Available offline</span>
-        <button
-          type="button"
-          onClick={clearOffline}
-          title="Delete the saved converter and free ~30 MB. You can save it again anytime."
-          className="ml-xs inline-flex items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-text-muted transition-colors hover:border-brand hover:text-brand"
-        >
-          <TrashIcon />
-          Remove
-        </button>
+        <Tooltip label="Delete the saved converter and free ~30 MB. You can save it again anytime.">
+          <button
+            type="button"
+            onClick={clearOffline}
+            className="inline-flex items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-text-muted transition-colors hover:border-brand hover:text-brand"
+          >
+            <TrashIcon />
+            Remove
+          </button>
+        </Tooltip>
       </span>
     );
   }
 
   // Not cached yet: invite the user to make it offline-ready.
   return (
-    <button
-      type="button"
-      onClick={downloadForOffline}
-      title="Download the converter (~30 MB) so it works offline next time"
-      className={cn(pill, "text-text-muted transition-colors hover:border-brand hover:text-text")}
-    >
-      <Dot className="bg-text-muted/50" />
-      Save for offline
-    </button>
+    <Tooltip label="Download the converter (~30 MB) so it works offline next time">
+      <button
+        type="button"
+        onClick={downloadForOffline}
+        className={cn(pill, "text-text-muted transition-colors hover:border-brand hover:text-text")}
+      >
+        <Dot className="bg-text-muted/50" />
+        Save for offline
+      </button>
+    </Tooltip>
   );
 }
