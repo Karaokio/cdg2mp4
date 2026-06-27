@@ -30,7 +30,7 @@ const HomeIcon = () => (
 );
 
 const pill =
-  "inline-flex items-center gap-sm rounded-pill border px-md py-[6px] text-sm font-medium shadow-subtle transition-colors";
+  "inline-flex min-h-[34px] items-center gap-sm rounded-pill border px-md text-sm font-medium shadow-subtle transition-colors";
 
 export function InstallPrompt() {
   const [deferred, setDeferred] = React.useState<BeforeInstallPromptEvent | null>(null);

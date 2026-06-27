@@ -94,7 +94,7 @@ export function OfflineStatus() {
     await refresh();
   };
 
-  const pill = "inline-flex items-center gap-sm rounded-pill border border-border bg-surface px-md py-[6px] text-sm shadow-subtle";
+  const pill = "inline-flex min-h-[34px] items-center gap-sm rounded-pill border border-border bg-surface px-md text-sm shadow-subtle";
 
   // Update available: amber, tap to reload into the new version.
   if (needRefresh) {
