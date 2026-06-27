@@ -56,7 +56,7 @@ function ResolutionPicker({
             aria-pressed={value === k}
             onClick={() => onChange(k)}
             className={cn(
-              "rounded-pill px-md py-[6px] font-marquee text-[11px] font-bold uppercase tracking-[.05em]",
+              "rounded-pill px-md py-[6px] font-marquee text-caption font-bold uppercase tracking-label",
               "transition-colors duration-[80ms] ease-standard",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]",
               value === k ? "bg-brand-wash text-brand" : "text-text-muted hover:text-text"
@@ -154,6 +154,8 @@ export function Converter() {
 
       {/* Dropzone */}
       {status !== "done" && (
+        // A drop region (not a button). The "Choose files" Button inside is the
+        // keyboard-accessible trigger; its click bubbles here to open the picker.
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -162,15 +164,9 @@ export function Converter() {
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => !working && inputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && !working) inputRef.current?.click();
-          }}
           className={cn(
             "flex flex-col items-center justify-center gap-md rounded-lg border-2 border-dashed",
             "px-xl py-3xl text-center transition-colors duration-[160ms] ease-standard",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]",
             working ? "cursor-default opacity-60" : "cursor-pointer",
             dragging ? "border-brand bg-brand-wash" : "border-border hover:border-brand"
           )}
@@ -178,10 +174,19 @@ export function Converter() {
           {working ? (
             <>
               <Spinner />
-              <p className="font-body font-semibold text-base">{phase}</p>
+              <p className="font-body font-semibold text-base" aria-live="polite">
+                {phase}
+              </p>
               {progress > 0 ? (
                 <div className="w-full max-w-[360px]">
-                  <div className="h-2 w-full overflow-hidden rounded-pill bg-background-sunken">
+                  <div
+                    role="progressbar"
+                    aria-label="Conversion progress"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="h-2 w-full overflow-hidden rounded-pill bg-background-sunken"
+                  >
                     <div
                       className="h-full rounded-pill bg-[image:var(--brand-gradient)] transition-[width] duration-200 ease-out"
                       style={{ width: `${Math.max(pct, 4)}%` }}
@@ -225,7 +230,14 @@ export function Converter() {
       {/* Result */}
       {status === "done" && result && (
         <div className="flex flex-col gap-lg">
-          <video src={result.url} controls autoPlay loop className="w-full rounded-lg shadow-medium" />
+          <video
+            src={result.url}
+            controls
+            autoPlay
+            loop
+            aria-label={`Converted karaoke video: ${result.name}`}
+            className="w-full rounded-lg shadow-medium"
+          />
           <div className="flex flex-wrap items-center justify-between gap-md">
             <div>
               <Label tone="muted">Ready</Label>

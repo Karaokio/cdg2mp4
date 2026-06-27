@@ -71,7 +71,7 @@ export function SocialLinks() {
           rel="noreferrer"
           aria-label={l.label}
           title={l.label}
-          className="text-text-muted transition-colors hover:text-brand"
+          className="rounded-sm text-text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
         >
           {l.icon}
         </a>

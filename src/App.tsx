@@ -40,7 +40,7 @@ export default function App() {
             </a>
           </p>
           <SocialLinks />
-          <p className="text-caption text-text-muted/70">
+          <p className="text-caption text-text-muted">
             built by the robots at{" "}
             <a
               className="underline transition-colors hover:text-brand"

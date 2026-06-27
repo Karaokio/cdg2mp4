@@ -95,7 +95,9 @@ export function OfflineStatus() {
     await refresh();
   };
 
-  const pill = "inline-flex min-h-[34px] items-center gap-sm rounded-pill border border-border bg-surface px-md text-sm shadow-subtle";
+  const pill =
+    "inline-flex min-h-[34px] items-center gap-sm rounded-pill border border-border bg-surface px-md text-sm shadow-subtle " +
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]";
 
   // Update available: amber, tap to reload into the new version.
   if (needRefresh) {
@@ -136,7 +138,7 @@ export function OfflineStatus() {
           <button
             type="button"
             onClick={clearOffline}
-            className="inline-flex items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-text-muted transition-colors hover:border-brand hover:text-brand"
+            className="inline-flex items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-text-muted transition-colors hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
           >
             <TrashIcon />
             Remove

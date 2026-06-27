@@ -31,7 +31,7 @@
 
   /* ---- Ink (text) -------------------------------------------------------- */
   --ko-ink-900:   #241A17;  /* primary text on light                       */
-  --ko-ink-500:   #8C7A70;  /* muted text on light                         */
+  --ko-ink-500:   #6B5A50;  /* muted text on light (>=4.5:1 on cream/white) */
   --ko-paper-50:  #F5EFEC;  /* primary text on dark                        */
   --ko-paper-300: #A8988F;  /* muted text on dark                          */
 

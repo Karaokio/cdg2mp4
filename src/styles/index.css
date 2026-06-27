@@ -43,3 +43,17 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* Respect prefers-reduced-motion. The token layer zeroes --ko-duration-*, but the
+   keyframe animations above (spinner, shimmer, breathing dot) use literal
+   durations, so neutralize all animation/long transitions globally here. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
