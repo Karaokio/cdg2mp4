@@ -12,19 +12,25 @@ export type ProgressFn = (ratio: number) => void;
 export type LogFn = (line: string) => void;
 
 let loadPromise: Promise<FFmpeg> | null = null;
+// ffmpeg.wasm runs one command at a time on the shared instance; this guards
+// against a second conversion starting while one is in flight.
+let busy = false;
 
 /** Lazily create and load a single shared FFmpeg instance. */
-export function loadFFmpeg(onLog?: LogFn): Promise<FFmpeg> {
+export function loadFFmpeg(): Promise<FFmpeg> {
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     const instance = new FFmpeg();
-    if (onLog) instance.on("log", ({ message }) => onLog(message));
     await instance.load({
       coreURL: await toBlobURL(coreURL, "text/javascript"),
       wasmURL: await toBlobURL(wasmURL, "application/wasm"),
     });
     return instance;
-  })();
+  })().catch((err) => {
+    // Never cache a rejected load (e.g. offline on first run); allow a retry.
+    loadPromise = null;
+    throw err;
+  });
   return loadPromise;
 }
 
@@ -38,14 +44,28 @@ export async function convertCdgToMp4(
   mp3: Uint8Array,
   opts: { size?: string; onProgress?: ProgressFn; onLog?: LogFn } = {}
 ): Promise<Uint8Array> {
-  const instance = await loadFFmpeg(opts.onLog);
+  if (busy) {
+    throw new Error("A conversion is already in progress. Please wait for it to finish.");
+  }
+  busy = true;
+
   const size = opts.size ?? "1440x1080";
+
+  let instance: FFmpeg;
+  try {
+    instance = await loadFFmpeg();
+  } catch {
+    busy = false;
+    throw new Error("Could not load the converter. Check your connection and try again.");
+  }
 
   const onProgress = ({ progress }: { progress: number }) => {
     // ffmpeg occasionally reports >1 near the end; clamp for the UI.
     opts.onProgress?.(Math.min(Math.max(progress, 0), 1));
   };
+  const onLog = opts.onLog ? ({ message }: { message: string }) => opts.onLog?.(message) : null;
   instance.on("progress", onProgress);
+  if (onLog) instance.on("log", onLog);
 
   try {
     await instance.writeFile("in.cdg", cdg);
@@ -65,19 +85,23 @@ export async function convertCdgToMp4(
       "-shortest",
       "out.mp4",
     ]);
-    if (code !== 0) throw new Error(`ffmpeg exited with code ${code}`);
+    if (code !== 0) throw new Error(`The converter failed (ffmpeg exit code ${code}).`);
 
-    const data = (await instance.readFile("out.mp4")) as Uint8Array;
-    if (!data.length) throw new Error("ffmpeg produced an empty file");
-
-    // Clean up the virtual FS so repeat conversions start fresh.
+    const data = await instance.readFile("out.mp4");
+    if (typeof data === "string" || data.length === 0) {
+      throw new Error("The converter produced an empty file.");
+    }
+    return data;
+  } finally {
+    instance.off("progress", onProgress);
+    if (onLog) instance.off("log", onLog);
+    // Always clear the virtual FS, even on failure, so nothing leaks into the
+    // next run. allSettled because files may not exist if writeFile failed early.
     await Promise.allSettled([
       instance.deleteFile("in.cdg"),
       instance.deleteFile("in.mp3"),
       instance.deleteFile("out.mp4"),
     ]);
-    return data;
-  } finally {
-    instance.off("progress", onProgress);
+    busy = false;
   }
 }
