@@ -2,18 +2,10 @@ import * as React from "react";
 import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
+import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
 
 type Status = "idle" | "working" | "done" | "error";
-
-// CDG is low-res 4:3 pixel art; these keep that aspect ratio. Higher = sharper
-// but slower to encode in the browser.
-const RESOLUTIONS = {
-  "480p": "640x480",
-  "720p": "960x720",
-  "1080p": "1440x1080",
-} as const;
-type ResKey = keyof typeof RESOLUTIONS;
 
 const read = async (f: File) => new Uint8Array(await f.arrayBuffer());
 
@@ -29,22 +21,7 @@ async function filesToPair(files: File[]): Promise<CdgPair> {
   throw new Error("Drop a karaoke .zip, or a matching .cdg and .mp3 together.");
 }
 
-/** Format a remaining-seconds estimate into calm, rounded copy. */
-function formatLeft(seconds: number): string {
-  if (!isFinite(seconds) || seconds <= 0) return "";
-  if (seconds < 60) return `about ${Math.max(5, Math.round(seconds / 5) * 5)}s left`;
-  const m = Math.floor(seconds / 60);
-  const s = Math.round((seconds % 60) / 15) * 15;
-  return s ? `about ${m}m ${s}s left` : `about ${m}m left`;
-}
-
-function ResolutionPicker({
-  value,
-  onChange,
-}: {
-  value: ResKey;
-  onChange: (r: ResKey) => void;
-}) {
+function ResolutionPicker({ value, onChange }: { value: ResKey; onChange: (r: ResKey) => void }) {
   return (
     <div className="flex items-center justify-center gap-md">
       <Label tone="muted">Quality</Label>
@@ -104,7 +81,7 @@ export function Converter() {
 
         setPhase("Loading converter…");
         const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
-          size: RESOLUTIONS[resolution],
+          size: resolutionToSize(resolution),
           onProgress: (r) => {
             setProgress(r);
             setPhase("Converting…");

@@ -9,7 +9,10 @@ import { fileURLToPath, URL } from "node:url";
 // from a versioned URL (see src/lib/coreUrls.ts) — bumping the core then
 // invalidates the runtime cache instead of serving a stale wasm forever.
 const coreVersion: string = JSON.parse(
-  readFileSync(fileURLToPath(new URL("./node_modules/@ffmpeg/core/package.json", import.meta.url)), "utf8")
+  readFileSync(
+    fileURLToPath(new URL("./node_modules/@ffmpeg/core/package.json", import.meta.url)),
+    "utf8"
+  )
 ).version;
 
 // Single-thread @ffmpeg/core (per gating spike) needs no COOP/COEP headers.
@@ -34,7 +37,12 @@ export default defineConfig({
         icons: [
           { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
           { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },
-          { src: "/pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          {
+            src: "/pwa-512-maskable.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
         ],
       },
       workbox: {

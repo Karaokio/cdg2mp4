@@ -8,4 +8,6 @@ const base = import.meta.env.BASE_URL;
 
 export const CORE_VERSION = __FFMPEG_CORE_VERSION__;
 export const CORE_JS_URL = `${base}ffmpeg/${CORE_VERSION}/ffmpeg-core.js`;
-export const CORE_WASM_URL = `${base}ffmpeg/${CORE_VERSION}/ffmpeg-core.wasm`;
+// The wasm is shipped gzipped (the raw ~31MB file exceeds Cloudflare Pages' 25 MiB
+// per-file limit) and decompressed in the browser; see src/lib/ffmpeg.ts.
+export const CORE_WASM_GZ_URL = `${base}ffmpeg/${CORE_VERSION}/ffmpeg-core.wasm.gz`;

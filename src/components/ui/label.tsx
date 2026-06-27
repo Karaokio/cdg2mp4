@@ -20,8 +20,7 @@ const labelVariants = cva(
 );
 
 export interface LabelProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof labelVariants> {}
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof labelVariants> {}
 
 export const Label = React.forwardRef<HTMLSpanElement, LabelProps>(
   ({ className, tone, ...props }, ref) => (

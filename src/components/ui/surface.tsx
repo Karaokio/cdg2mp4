@@ -23,8 +23,7 @@ const surfaceVariants = cva(
 );
 
 export interface SurfaceProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof surfaceVariants> {}
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof surfaceVariants> {}
 
 export const Surface = React.forwardRef<HTMLDivElement, SurfaceProps>(
   ({ className, interactive, ...props }, ref) => (

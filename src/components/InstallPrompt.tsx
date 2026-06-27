@@ -24,7 +24,16 @@ const touchLabel = () =>
     : "Install app";
 
 const HomeIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <path d="M3 10.5 12 3l9 7.5" />
     <path d="M5 9.5V21h14V9.5" />
   </svg>
@@ -38,10 +47,9 @@ export function InstallPrompt() {
   const [deferred, setDeferred] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = React.useState(isStandalone);
   const [showIosHint, setShowIosHint] = React.useState(false);
-  const [label, setLabel] = React.useState(touchLabel);
+  const [label] = React.useState(touchLabel);
 
   React.useEffect(() => {
-    setLabel(touchLabel());
     const onPrompt = (e: Event) => {
       e.preventDefault(); // suppress the mini-infobar; we drive install from our button
       setDeferred(e as BeforeInstallPromptEvent);
@@ -72,7 +80,10 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={install}
-          className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
+          className={cn(
+            pill,
+            "border-border bg-surface text-text hover:border-brand hover:text-brand"
+          )}
         >
           <HomeIcon />
           {label}
@@ -88,14 +99,18 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={() => setShowIosHint((v) => !v)}
-          className={cn(pill, "border-border bg-surface text-text hover:border-brand hover:text-brand")}
+          className={cn(
+            pill,
+            "border-border bg-surface text-text hover:border-brand hover:text-brand"
+          )}
         >
           <HomeIcon />
           Add to Home Screen
         </button>
         {showIosHint && (
           <span className="absolute bottom-full left-1/2 mb-sm w-[230px] -translate-x-1/2 rounded-md border border-border bg-surface px-md py-sm text-sm text-text-muted shadow-medium">
-            In Safari, tap the Share button, then choose <span className="font-medium text-text">Add to Home Screen</span>.
+            In Safari, tap the Share button, then choose{" "}
+            <span className="font-medium text-text">Add to Home Screen</span>.
           </span>
         )}
       </span>

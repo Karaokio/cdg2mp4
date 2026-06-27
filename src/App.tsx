@@ -15,7 +15,8 @@ export default function App() {
             Karaoke Video Converter
           </h1>
           <p className="mx-auto mt-md max-w-[36rem] text-lg text-text-muted">
-            Turn a CDG+MP3 karaoke file into a shareable MP4 video,<br />
+            Turn a CDG+MP3 karaoke file into a shareable MP4 video,
+            <br />
             right in your browser.
           </p>
         </header>
