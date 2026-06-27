@@ -131,12 +131,13 @@ export function Converter() {
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-selecting the same file
-    if (files.length) void run(files);
+    if (files.length && status !== "working") void run(files);
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
+    if (status === "working") return; // don't start a second conversion mid-run
     const files = Array.from(e.dataTransfer.files ?? []);
     if (files.length) void run(files);
   };
