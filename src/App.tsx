@@ -1,5 +1,6 @@
 import { Converter } from "@/components/Converter";
 import { OfflineStatus } from "@/components/OfflineStatus";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -20,8 +21,9 @@ export default function App() {
 
         <Converter />
 
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-sm">
           <OfflineStatus />
+          <InstallPrompt />
         </div>
 
         <footer className="text-center text-sm text-text-muted">
