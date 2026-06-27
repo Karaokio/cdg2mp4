@@ -28,7 +28,6 @@ export default function App() {
         </div>
 
         <footer className="flex flex-col items-center gap-md text-center text-sm text-text-muted">
-          <SocialLinks />
           <p>
             Runs entirely in your browser · works offline · powered by{" "}
             <a
@@ -39,6 +38,19 @@ export default function App() {
             >
               ffmpeg.wasm
             </a>
+          </p>
+          <SocialLinks />
+          <p className="text-caption text-text-muted/70">
+            built by the robots at{" "}
+            <a
+              className="underline transition-colors hover:text-brand"
+              href="https://lilrobo.xyz"
+              target="_blank"
+              rel="noreferrer"
+            >
+              lilrobo.xyz
+            </a>{" "}
+            in sunny san diego
           </p>
         </footer>
       </main>
