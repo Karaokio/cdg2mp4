@@ -102,6 +102,7 @@ export function OfflineStatus() {
       <button
         type="button"
         onClick={() => updateServiceWorker(true)}
+        title="A newer version of the app is ready. Tap to reload into it."
         className={cn(pill, "font-medium text-text transition-colors hover:border-brand")}
       >
         <Dot className="bg-spotlight" pulse />
@@ -122,7 +123,10 @@ export function OfflineStatus() {
   // Cached: green, fully usable offline. Offer to reclaim the space.
   if (cached) {
     return (
-      <span className={cn(pill, "text-text")}>
+      <span
+        className={cn(pill, "text-text")}
+        title="The converter is saved on this device and works with no internet."
+      >
         <Dot className="bg-success" />
         <span className="font-medium">Available offline</span>
         <button
