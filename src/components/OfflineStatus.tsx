@@ -126,8 +126,12 @@ export function OfflineStatus() {
   if (cached) {
     return (
       <span className={cn(pill, "text-text")}>
-        <Dot className="bg-success" />
-        <span className="font-medium">Available offline</span>
+        <Tooltip label="The converter is saved on this device and works with no internet.">
+          <span className="inline-flex items-center gap-sm">
+            <Dot className="bg-success" />
+            <span className="font-medium">Available offline</span>
+          </span>
+        </Tooltip>
         <Tooltip label="Delete the saved converter and free ~30 MB. You can save it again anytime.">
           <button
             type="button"
