@@ -57,6 +57,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        # Publishable client config (baked into the bundle). Set as repo Variables
+        # under Settings > Secrets and variables > Actions > Variables.
+        env:
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+          VITE_TALLY_FORM_URL: ${{ vars.VITE_TALLY_FORM_URL }}
       - name: Deploy dist/ to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

@@ -13,12 +13,16 @@ import "@fontsource/geist-mono/400.css";
 
 import "./styles/index.css";
 import { APP_NAME, COMPANY, APP_VERSION, BUILD_COMMIT, BUILD_TIME } from "@/lib/buildInfo";
+import { initAnalytics } from "@/lib/analytics";
 import App from "@/App";
 
 // Build-info traceability in the console.
 console.info(
   `${APP_NAME} v${APP_VERSION} · build ${BUILD_COMMIT} · ${BUILD_TIME} · a ${COMPANY} app`
 );
+
+// Product analytics (no-op unless a PostHog key is configured).
+initAnalytics();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

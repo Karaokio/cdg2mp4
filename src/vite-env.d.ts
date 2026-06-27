@@ -9,3 +9,10 @@ declare const __FFMPEG_CORE_VERSION__: string;
 declare const __APP_VERSION__: string;
 declare const __BUILD_COMMIT__: string;
 declare const __BUILD_TIME__: string;
+
+/** Public client config (see .env.example). All optional; absent = feature off. */
+interface ImportMetaEnv {
+  readonly VITE_POSTHOG_KEY?: string;
+  readonly VITE_POSTHOG_HOST?: string;
+  readonly VITE_TALLY_FORM_URL?: string;
+}

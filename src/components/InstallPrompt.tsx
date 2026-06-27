@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Tooltip } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 // Not in the DOM lib types yet.
@@ -57,6 +58,7 @@ export function InstallPrompt() {
     const onInstalled = () => {
       setInstalled(true);
       setDeferred(null);
+      track("pwa_installed");
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
