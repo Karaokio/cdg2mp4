@@ -44,6 +44,7 @@ export const trackConversionSucceeded = (p: {
   resolution: string;
   duration_ms: number;
   output_mb_bucket: string;
+  source_name?: string; // the song base name (file contents never leave the device)
 }) => track("conversion_succeeded", p);
 
 export const trackConversionFailed = (p: {
@@ -51,7 +52,14 @@ export const trackConversionFailed = (p: {
   resolution: string;
   stage: string;
   reason: string;
+  source_name?: string;
 }) => track("conversion_failed", p);
+
+/** The input's base name (the song), trimmed and length-capped for analytics. */
+export function songName(baseName: string | undefined): string | undefined {
+  const name = baseName?.trim();
+  return name ? name.slice(0, 120) : undefined;
+}
 
 /** Coarse size buckets so an exact (potentially identifying) file size is never stored. */
 export function mbBucket(bytes: number): string {

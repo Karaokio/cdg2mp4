@@ -11,6 +11,7 @@ import {
   track,
   mbBucket,
   classifyError,
+  songName,
   type InputType,
 } from "@/lib/analytics";
 
@@ -90,10 +91,12 @@ export function Converter() {
         : "loose";
       const t0 = Date.now();
       let stage = "read";
+      let source: string | undefined;
       trackConversionStarted({ input_type: inputType, resolution });
       try {
         setPhase("Reading files…");
         const pair = await filesToPair(files);
+        source = songName(pair.baseName);
 
         stage = "load";
         setPhase("Loading converter…");
@@ -120,6 +123,7 @@ export function Converter() {
           resolution,
           duration_ms: Date.now() - t0,
           output_mb_bucket: mbBucket(blob.size),
+          source_name: source,
         });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -130,6 +134,7 @@ export function Converter() {
           resolution,
           stage,
           reason: classifyError(message),
+          source_name: source,
         });
       }
     },
