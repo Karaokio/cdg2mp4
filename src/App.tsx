@@ -1,4 +1,5 @@
 import { Converter } from "@/components/Converter";
+import { OfflineStatus } from "@/components/OfflineStatus";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -18,6 +19,10 @@ export default function App() {
         </header>
 
         <Converter />
+
+        <div className="flex justify-center">
+          <OfflineStatus />
+        </div>
 
         <footer className="text-center text-sm text-text-muted">
           Runs entirely in your browser · works offline · powered by{" "}
