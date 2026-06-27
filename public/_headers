@@ -1,0 +1,10 @@
+# Security headers for static hosts that read a _headers file (e.g. Cloudflare Pages).
+# The CSP is shaped around ffmpeg.wasm: the core is fetched same-origin and runs
+# from a blob: worker, and WebAssembly needs 'wasm-unsafe-eval'. Converted videos
+# and font/image assets use blob:/data:. There is no backend and no third-party
+# script, so everything else is locked to 'self'.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
