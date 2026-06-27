@@ -9,6 +9,9 @@ export default defineConfig({
   },
   define: {
     __FFMPEG_CORE_VERSION__: JSON.stringify("test"),
+    __APP_VERSION__: JSON.stringify("test"),
+    __BUILD_COMMIT__: JSON.stringify("test"),
+    __BUILD_TIME__: JSON.stringify("1970-01-01T00:00:00.000Z"),
   },
   test: {
     environment: "happy-dom",
@@ -18,7 +21,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/lib/**/*.ts"],
-      exclude: ["src/lib/coreUrls.ts", "src/**/*.test.ts"],
+      exclude: ["src/lib/coreUrls.ts", "src/lib/buildInfo.ts", "src/**/*.test.ts"],
     },
   },
 });

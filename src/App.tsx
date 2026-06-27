@@ -2,6 +2,7 @@ import { Converter } from "@/components/Converter";
 import { OfflineStatus } from "@/components/OfflineStatus";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SocialLinks } from "@/components/SocialLinks";
+import { BuildInfo } from "@/components/BuildInfo";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
             </a>{" "}
             in sunny san diego
           </p>
+          <BuildInfo />
         </footer>
       </main>
     </div>
