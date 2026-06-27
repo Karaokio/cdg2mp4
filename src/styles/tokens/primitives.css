@@ -1,0 +1,127 @@
+/* =============================================================================
+   Karaokio — Primitive tokens
+   -----------------------------------------------------------------------------
+   Raw, theme-independent values. These are the only place literal hex / px /
+   ms values are allowed to live. Nothing in the app should reference these
+   directly — compose through the SEMANTIC layer (semantic.css) instead.
+   Prefix `--ko-*` marks "primitive, do not consume directly".
+   ============================================================================= */
+
+:root {
+  /* ---- Brand crimson ramp ------------------------------------------------ */
+  --ko-red-50:  #FCEDEC;  /* faint wash behind live/brand chips            */
+  --ko-red-100: #F3D6D3;  /* hover wash                                    */
+  --ko-red-500: #D92334;  /* BRAND — the Karaokio red                      */
+  --ko-red-600: #B11026;  /* label red (marquee eyebrows)                  */
+  --ko-red-700: #950A1F;  /* crimson — gradient end, pressed states        */
+
+  /* ---- Warm neutrals · light surfaces ------------------------------------ */
+  --ko-cream-50:  #FFFFFF;  /* card / surface                              */
+  --ko-cream-100: #FBF6F1;  /* app background                              */
+  --ko-cream-200: #F1E9E1;  /* subtle fill                                 */
+  --ko-cream-300: #ECE0D8;  /* warm border                                 */
+  --ko-cream-400: #E9E4DE;  /* sunken background behind the app frame      */
+
+  /* ---- Warm neutrals · dark "stage" (recovered original night theme) ----- */
+  --ko-stage-950: #0E0A09;  /* sunken                                      */
+  --ko-stage-900: #15100F;  /* background                                  */
+  --ko-stage-800: #211A19;  /* surface                                     */
+  --ko-stage-700: #2C2422;  /* raised surface                              */
+  --ko-stage-600: #3A2F2D;  /* border                                      */
+
+  /* ---- Ink (text) -------------------------------------------------------- */
+  --ko-ink-900:   #241A17;  /* primary text on light                       */
+  --ko-ink-500:   #8C7A70;  /* muted text on light                         */
+  --ko-paper-50:  #F5EFEC;  /* primary text on dark                        */
+  --ko-paper-300: #A8988F;  /* muted text on dark                          */
+
+  /* ---- Status ------------------------------------------------------------ */
+  --ko-amber-500: #F39B12;  /* spotlight (light)                           */
+  --ko-amber-300: #FFC24B;  /* spotlight (dark)                            */
+  --ko-green-500: #2E9E50;  /* success (light)                             */
+  --ko-green-400: #3FB950;  /* success (dark)                              */
+
+  /* ---- Brand gradient ---------------------------------------------------- */
+  --ko-gradient-brand: linear-gradient(180deg, var(--ko-red-500), var(--ko-red-700));
+
+  /* ---- Type · families --------------------------------------------------- */
+  --ko-font-display: "Unbounded", system-ui, sans-serif;
+  --ko-font-marquee: "Saira Semi Condensed", system-ui, sans-serif; /* the eyebrow/label face */
+  --ko-font-body:    "Hanken Grotesk", system-ui, sans-serif;
+  --ko-font-mono:    "Geist Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ---- Type · size scale (8 steps, base 16px) ---------------------------- */
+  --ko-text-caption: 0.6875rem;  /* 11px — eyebrows, badges, table headers  */
+  --ko-text-sm:      0.8125rem;  /* 13px — secondary / dense rows           */
+  --ko-text-base:    0.9375rem;  /* 15px — body default                     */
+  --ko-text-lg:      1.125rem;   /* 18px — subheading                       */
+  --ko-text-xl:      1.375rem;   /* 22px — heading                          */
+  --ko-text-2xl:     1.6875rem;  /* 27px — title                            */
+  --ko-text-3xl:     2.125rem;   /* 34px — display                          */
+  --ko-text-display: 2.75rem;    /* 44px — hero display                     */
+
+  /* ---- Type · line-height ------------------------------------------------ */
+  --ko-leading-tight:  1.1;
+  --ko-leading-snug:   1.3;
+  --ko-leading-normal: 1.5;
+
+  /* ---- Type · weight ----------------------------------------------------- */
+  --ko-weight-medium:   500;
+  --ko-weight-semibold: 600;
+  --ko-weight-bold:     700;
+  --ko-weight-black:    900;
+
+  /* ---- Type · tracking --------------------------------------------------- */
+  --ko-tracking-label:  0.07em;  /* marquee eyebrows / badges               */
+  --ko-tracking-tight: -0.01em;  /* large display                           */
+  --ko-tracking-normal: 0;
+
+  /* ---- Spacing · 4px base ------------------------------------------------ */
+  --ko-space-xs:  0.25rem;  /*  4px */
+  --ko-space-sm:  0.5rem;   /*  8px */
+  --ko-space-md:  0.75rem;  /* 12px */
+  --ko-space-lg:  1rem;     /* 16px */
+  --ko-space-xl:  1.5rem;   /* 24px */
+  --ko-space-2xl: 2rem;     /* 32px */
+  --ko-space-3xl: 3rem;     /* 48px */
+
+  /* ---- Radius ------------------------------------------------------------ */
+  --ko-radius-sm:   8px;
+  --ko-radius-md:   12px;
+  --ko-radius-lg:   16px;
+  --ko-radius-xl:   20px;
+  --ko-radius-2xl:  24px;
+  --ko-radius-pill: 999px;
+
+  /* ---- Elevation · warm-tinted (light) ----------------------------------- */
+  --ko-elevation-subtle: 0 2px 10px rgba(74, 40, 30, 0.08);
+  --ko-elevation-medium: 0 8px 22px rgba(74, 40, 30, 0.14);
+  --ko-elevation-strong: 0 18px 44px rgba(74, 40, 30, 0.20);
+  --ko-elevation-brand:  0 10px 22px rgba(149, 10, 31, 0.30); /* primary CTA glow */
+
+  /* ---- Elevation · dark -------------------------------------------------- */
+  --ko-elevation-subtle-dark: 0 2px 10px rgba(0, 0, 0, 0.40);
+  --ko-elevation-medium-dark: 0 8px 22px rgba(0, 0, 0, 0.50);
+  --ko-elevation-strong-dark: 0 18px 44px rgba(0, 0, 0, 0.60);
+  --ko-elevation-brand-dark:  0 10px 22px rgba(149, 10, 31, 0.45);
+
+  /* ---- Motion ------------------------------------------------------------ */
+  --ko-duration-fast:    80ms;    /* hover / press micro-interactions       */
+  --ko-duration-base:    160ms;   /* most transitions                       */
+  --ko-duration-slow:    280ms;   /* sheets, drawers, view changes          */
+  --ko-duration-breathe: 2000ms;  /* the live-dot pulse                     */
+
+  --ko-ease-standard: cubic-bezier(0.2, 0, 0, 1);     /* default            */
+  --ko-ease-out:      cubic-bezier(0, 0, 0.2, 1);     /* entering           */
+  --ko-ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* playful accents */
+}
+
+/* Honor reduced-motion at the token layer so every consumer inherits it. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ko-duration-fast: 0ms;
+    --ko-duration-base: 0ms;
+    --ko-duration-slow: 0ms;
+    --ko-duration-breathe: 0ms;
+  }
+}

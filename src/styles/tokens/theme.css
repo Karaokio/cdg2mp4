@@ -1,0 +1,97 @@
+/* =============================================================================
+   Karaokio — Tailwind v4 theme bridge
+   -----------------------------------------------------------------------------
+   Maps the semantic tokens onto Tailwind's utility namespaces so you write
+   `bg-surface`, `text-brand`, `border-border`, `rounded-lg`, `shadow-subtle`,
+   `font-display`, `text-2xl`, `gap-lg` — and they all resolve to tokens.
+
+   `@theme inline` is deliberate: it emits utilities that reference the runtime
+   CSS variables, so flipping `data-theme` / `data-density` restyles live
+   without rebuilding utilities.
+
+   Requires Tailwind v4. In your app entry CSS:
+       @import "tailwindcss";
+       @import "./tokens/index.css";   (which imports this file last)
+   ============================================================================= */
+
+@theme inline {
+  /* ---- Font families  →  font-display / font-marquee / font-body / font-mono */
+  --font-display: var(--ko-font-display);
+  --font-marquee: var(--ko-font-marquee);
+  --font-body:    var(--ko-font-body);
+  --font-mono:    var(--ko-font-mono);
+
+  /* ---- Colors  →  bg-* / text-* / border-* / ring-* ---------------------- */
+  --color-background:        var(--background);
+  --color-background-sunken: var(--background-sunken);
+  --color-surface:           var(--surface);
+  --color-surface-raised:    var(--surface-raised);
+  --color-border:            var(--border);
+  --color-text:              var(--text);
+  --color-text-muted:        var(--text-muted);
+  --color-text-onbrand:      var(--text-onbrand);
+  --color-brand:             var(--brand);
+  --color-brand-strong:      var(--brand-strong);
+  --color-brand-label:       var(--brand-label);
+  --color-brand-wash:        var(--brand-wash);
+  --color-live:              var(--status-live);
+  --color-spotlight:         var(--status-spotlight);
+  --color-success:           var(--status-success);
+
+  /* ---- Type sizes (with paired line-heights)  →  text-* ------------------ */
+  --text-caption:               var(--ko-text-caption);
+  --text-caption--line-height:  var(--ko-leading-normal);
+  --text-sm:                    var(--ko-text-sm);
+  --text-sm--line-height:       var(--ko-leading-normal);
+  --text-base:                  var(--ko-text-base);
+  --text-base--line-height:     var(--ko-leading-normal);
+  --text-lg:                    var(--ko-text-lg);
+  --text-lg--line-height:       var(--ko-leading-snug);
+  --text-xl:                    var(--ko-text-xl);
+  --text-xl--line-height:       var(--ko-leading-snug);
+  --text-2xl:                   var(--ko-text-2xl);
+  --text-2xl--line-height:      var(--ko-leading-tight);
+  --text-3xl:                   var(--ko-text-3xl);
+  --text-3xl--line-height:      var(--ko-leading-tight);
+  --text-display:               var(--ko-text-display);
+  --text-display--line-height:  var(--ko-leading-tight);
+
+  /* ---- Font weights  →  font-medium / font-semibold / font-bold / font-black */
+  --font-weight-medium:   var(--ko-weight-medium);
+  --font-weight-semibold: var(--ko-weight-semibold);
+  --font-weight-bold:     var(--ko-weight-bold);
+  --font-weight-black:    var(--ko-weight-black);
+
+  /* ---- Tracking  →  tracking-label / tracking-tight / tracking-normal ----- */
+  --tracking-label:  var(--ko-tracking-label);
+  --tracking-tight:  var(--ko-tracking-tight);
+  --tracking-normal: var(--ko-tracking-normal);
+
+  /* ---- Spacing  →  p-* / m-* / gap-* (named, alongside the numeric scale) - */
+  --spacing-xs:  var(--ko-space-xs);
+  --spacing-sm:  var(--ko-space-sm);
+  --spacing-md:  var(--ko-space-md);
+  --spacing-lg:  var(--ko-space-lg);
+  --spacing-xl:  var(--ko-space-xl);
+  --spacing-2xl: var(--ko-space-2xl);
+  --spacing-3xl: var(--ko-space-3xl);
+
+  /* ---- Radius  →  rounded-* ---------------------------------------------- */
+  --radius-sm:   var(--ko-radius-sm);
+  --radius-md:   var(--ko-radius-md);
+  --radius-lg:   var(--ko-radius-lg);
+  --radius-xl:   var(--ko-radius-xl);
+  --radius-2xl:  var(--ko-radius-2xl);
+  --radius-pill: var(--ko-radius-pill);
+
+  /* ---- Elevation  →  shadow-* (theme-aware) ------------------------------ */
+  --shadow-subtle: var(--elevation-subtle);
+  --shadow-medium: var(--elevation-medium);
+  --shadow-strong: var(--elevation-strong);
+  --shadow-brand:  var(--elevation-brand);
+
+  /* ---- Easings  →  ease-standard / ease-out / ease-spring ---------------- */
+  --ease-standard: var(--ko-ease-standard);
+  --ease-out:      var(--ko-ease-out);
+  --ease-spring:   var(--ko-ease-spring);
+}

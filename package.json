@@ -1,0 +1,41 @@
+{
+  "name": "cdg2mp4",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Karaokio CDG-to-MP4 converter — 100% in-browser, offline, powered by ffmpeg.wasm.",
+  "scripts": {
+    "copy:core": "node scripts/copy-ffmpeg-core.mjs",
+    "predev": "npm run copy:core",
+    "dev": "vite",
+    "prebuild": "npm run copy:core",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@fontsource/geist-mono": "^5.2.5",
+    "@fontsource/hanken-grotesk": "^5.2.5",
+    "@fontsource/saira-semi-condensed": "^5.2.5",
+    "@fontsource/unbounded": "^5.2.5",
+    "@radix-ui/react-slot": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "fflate": "^0.8.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/node": "^22.20.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0"
+  }
+}
