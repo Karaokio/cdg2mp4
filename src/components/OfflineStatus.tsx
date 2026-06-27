@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Tooltip } from "@/components/ui";
+import { CORE_JS_URL, CORE_WASM_URL } from "@/lib/coreUrls";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
-const base = import.meta.env.BASE_URL;
-const CORE_URLS = [`${base}ffmpeg/ffmpeg-core.js`, `${base}ffmpeg/ffmpeg-core.wasm`];
+const CORE_URLS = [CORE_JS_URL, CORE_WASM_URL];
 const CORE_CACHE = "ffmpeg-core";
-const CORE_WASM = CORE_URLS[1];
+const CORE_WASM = CORE_WASM_URL;
 
 async function isCoreCached(): Promise<boolean> {
   if (!("caches" in window)) return false;
