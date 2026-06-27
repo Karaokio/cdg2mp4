@@ -20,6 +20,7 @@ export function initAnalytics(): void {
     capture_pageview: true,
     capture_pageleave: false,
     disable_session_recording: true,
+    capture_exceptions: true, // auto-report uncaught errors + unhandled rejections
   });
   // Tag every event with the app name + exact build (see src/lib/buildInfo.ts).
   posthog.register({ app: APP_NAME, build: BUILD_COMMIT });
@@ -32,6 +33,12 @@ type Props = Record<string, string | number | boolean | undefined>;
 export function track(event: string, props?: Props): void {
   if (!enabled) return;
   posthog.capture(event, props);
+}
+
+/** Report a caught error (e.g. from the React error boundary). No-ops when disabled. */
+export function captureException(error: unknown, props?: Props): void {
+  if (!enabled) return;
+  posthog.captureException(error, props);
 }
 
 export type InputType = "zip" | "pair"; // a .zip, or a loose .cdg + .mp3 file pair
