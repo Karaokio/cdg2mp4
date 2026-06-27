@@ -14,6 +14,7 @@ import "@fontsource/geist-mono/400.css";
 import "./styles/index.css";
 import { APP_NAME, COMPANY, APP_VERSION, BUILD_COMMIT, BUILD_TIME } from "@/lib/buildInfo";
 import { initAnalytics } from "@/lib/analytics";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "@/App";
 
 // Build-info traceability in the console.
@@ -26,6 +27,8 @@ initAnalytics();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );
