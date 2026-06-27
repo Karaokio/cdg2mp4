@@ -3,6 +3,7 @@ import { OfflineStatus } from "@/components/OfflineStatus";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SocialLinks } from "@/components/SocialLinks";
 import { BuildInfo } from "@/components/BuildInfo";
+import { FeedbackLink } from "@/components/Feedback";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
             </a>
           </p>
           <SocialLinks />
+          <FeedbackLink />
           <p className="text-caption text-text-muted">
             built by the robots at{" "}
             <a
