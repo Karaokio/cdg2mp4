@@ -21,6 +21,10 @@ Your files never leave your machine.
   core deadlocks at x264 init, and single-thread needs no COOP/COEP cross-origin-isolation
   headers, which keeps deployment trivial.
 - **fflate** does in-browser unzip of the karaoke `.zip`.
+- **PWA** via `vite-plugin-pwa`: the app shell is precached for offline reload, and the
+  31MB ffmpeg core is runtime-cached on first use (so first paint stays fast). An
+  "Available offline" pill shows cache status and lets users save or clear the converter
+  (~30MB). Updates are prompted, never forced mid-conversion. Installable on desktop/mobile.
 
 ## Develop
 
