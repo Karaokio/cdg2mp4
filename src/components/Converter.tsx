@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
+import { setConverting } from "@/lib/converting";
 import { FeedbackPrompt } from "@/components/Feedback";
 import {
   trackConversionStarted,
@@ -95,6 +96,7 @@ export function Converter() {
       let stage = "read";
       let name: string | undefined;
       setLastInput(inputType);
+      setConverting(true); // hold off any service-worker auto-update reload until done
       trackConversionStarted({ input_type: inputType, resolution });
       try {
         setPhase("Reading files…");
@@ -139,6 +141,8 @@ export function Converter() {
           reason: classifyError(message),
           file_name: name,
         });
+      } finally {
+        setConverting(false); // idle again; a pending update may now auto-apply
       }
     },
     [result, resolution]

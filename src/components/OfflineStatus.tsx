@@ -3,6 +3,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 import { Tooltip } from "@/components/ui";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "@/lib/coreUrls";
 import { track } from "@/lib/analytics";
+import { isConverting, subscribeConverting } from "@/lib/converting";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
@@ -92,6 +93,25 @@ export function OfflineStatus() {
     const t = window.setTimeout(() => setDevNote(false), 7000);
     return () => window.clearTimeout(t);
   }, [devNote]);
+
+  // Auto-apply a pending update when the app is idle, so a returning visitor lands on
+  // the latest version without having to click "Update ready" — but never mid-conversion,
+  // since updateServiceWorker(true) reloads the page and would lose the work. If a
+  // conversion is running we wait and apply the moment it finishes (or the user clicks
+  // the pill). The pill below remains as the manual path / what shows during a conversion.
+  //
+  // Alternative: setting `registerType: "autoUpdate"` in vite.config.ts makes the plugin
+  // apply updates immediately and unconditionally (no pill, no prompt). It's simpler, but
+  // it can reload the page during a conversion, which is exactly why we gate on
+  // isConverting() here instead of using autoUpdate.
+  React.useEffect(() => {
+    if (!needRefresh) return;
+    const apply = () => {
+      if (!isConverting()) updateServiceWorker(true);
+    };
+    apply(); // idle right now? apply immediately
+    return subscribeConverting(apply); // otherwise apply when the conversion ends
+  }, [needRefresh, updateServiceWorker]);
 
   if (!supported) return null;
 

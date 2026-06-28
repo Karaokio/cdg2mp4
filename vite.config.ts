@@ -68,7 +68,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "prompt", // never interrupt an in-progress conversion
+      // "prompt": we control when a new version activates so a reload never interrupts an
+      // in-progress conversion. OfflineStatus then auto-applies the update once the app is
+      // idle, so returning visitors still land on the latest version without clicking the
+      // pill. Switching to "autoUpdate" would apply updates immediately and unconditionally
+      // (simpler, no pill) but could reload mid-conversion and lose the work.
+      registerType: "prompt",
       includeAssets: ["favicon/**", "logo_karaokio.png"],
       manifest: {
         // The app is "cdg2mp4"; Karaokio is the company/brand behind it.
