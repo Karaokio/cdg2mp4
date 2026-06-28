@@ -33,6 +33,9 @@ collect a small amount of anonymous usage data and any feedback you choose to se
 
 ## Notes
 
+- The feedback form opens as an **in-page popup loaded from Tally** (`tally.so`); clicking
+  "Share feedback" loads Tally's widget script into the page. If it can't load (for example
+  with an ad/tracking blocker, or offline), the form opens as a normal page instead.
 - Analytics and feedback are **off in development** and only active when their keys are
   configured for the deployed site.
 - We use third-party processors (PostHog, Tally, and the email tool a newsletter may use).

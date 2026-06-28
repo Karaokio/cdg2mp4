@@ -22,8 +22,8 @@ console.info(
   `${APP_NAME} v${APP_VERSION} · build ${BUILD_COMMIT} · ${BUILD_TIME} · a ${COMPANY} app`
 );
 
-// Product analytics (no-op unless a PostHog key is configured).
-initAnalytics();
+// Product analytics (lazy-loaded; no-op unless a PostHog key is configured).
+void initAnalytics();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

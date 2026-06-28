@@ -1,44 +1,48 @@
-import posthog from "posthog-js";
 import { APP_NAME, BUILD_COMMIT } from "./buildInfo";
 
 // PostHog product analytics. Off unless a publishable project key is configured,
 // so dev, local builds, and tests stay silent. The key is a client-side key by
-// design (baked into the bundle); there is nothing secret here.
+// design (baked into the bundle); there is nothing secret here. posthog-js is
+// dynamically imported only when a key is set, so it stays off the first-load path.
 const KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const HOST =
   (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? "https://us.i.posthog.com";
 
-let enabled = false;
+type Posthog = Awaited<typeof import("posthog-js")>["default"];
+let ph: Posthog | null = null;
 
-/** Initialise PostHog once, only when a key is present. Safe to call anywhere. */
-export function initAnalytics(): void {
-  if (enabled || !KEY || typeof window === "undefined") return;
-  posthog.init(KEY, {
-    api_host: HOST,
-    person_profiles: "identified_only", // anonymous tool; never call identify
-    autocapture: false, // only the named events below, keeps the data clean + quota low
-    capture_pageview: true,
-    capture_pageleave: false,
-    disable_session_recording: true,
-    capture_exceptions: true, // auto-report uncaught errors + unhandled rejections
-  });
-  // Tag every event with the app name + exact build (see src/lib/buildInfo.ts).
-  posthog.register({ app: APP_NAME, build: BUILD_COMMIT });
-  enabled = true;
+/** Load + initialise PostHog once, only when a key is present. Best-effort; never throws. */
+export async function initAnalytics(): Promise<void> {
+  if (ph || !KEY || typeof window === "undefined") return;
+  try {
+    const { default: posthog } = await import("posthog-js");
+    posthog.init(KEY, {
+      api_host: HOST,
+      person_profiles: "identified_only", // anonymous tool; never call identify
+      autocapture: false, // only the named events below, keeps the data clean + quota low
+      capture_pageview: true,
+      capture_pageleave: false,
+      disable_session_recording: true,
+      capture_exceptions: true, // auto-report uncaught errors + unhandled rejections
+    });
+    // Tag every event with the app name + exact build (see src/lib/buildInfo.ts).
+    posthog.register({ app: APP_NAME, build: BUILD_COMMIT });
+    ph = posthog;
+  } catch {
+    /* analytics is best-effort; a failed load must never break the app */
+  }
 }
 
 type Props = Record<string, string | number | boolean | undefined>;
 
-/** Capture an event. No-ops when analytics is disabled. */
+/** Capture an event. No-ops until analytics is loaded + enabled. */
 export function track(event: string, props?: Props): void {
-  if (!enabled) return;
-  posthog.capture(event, props);
+  ph?.capture(event, props);
 }
 
 /** Report a caught error (e.g. from the React error boundary). No-ops when disabled. */
 export function captureException(error: unknown, props?: Props): void {
-  if (!enabled) return;
-  posthog.captureException(error, props);
+  ph?.captureException(error, props);
 }
 
 export type InputType = "zip" | "pair"; // a .zip, or a loose .cdg + .mp3 file pair
@@ -77,13 +81,15 @@ export function mbBucket(bytes: number): string {
   return "50+";
 }
 
-/** Map an error message to a low-cardinality reason code (messages are generic, no PII). */
+// Map an error message to a low-cardinality reason code (messages are generic, no PII).
+// Order matters: specific input/output cases are matched before the generic "zip" test,
+// since the "drop the right files" and "file is empty" messages also contain ".zip".
 export function classifyError(message: string): string {
   if (/already in progress/i.test(message)) return "busy";
-  if (/load the converter/i.test(message)) return "load_failed";
+  if (/load the converter|converter core/i.test(message)) return "load_failed";
   if (/exit code/i.test(message)) return "ffmpeg_error";
-  if (/empty file/i.test(message)) return "empty_output";
-  if (/zip|find a/i.test(message)) return "bad_zip";
-  if (/Drop a karaoke|matching/i.test(message)) return "bad_input";
+  if (/produced an empty/i.test(message)) return "empty_output";
+  if (/Drop a karaoke|matching|file is empty/i.test(message)) return "bad_input";
+  if (/zip/i.test(message)) return "bad_zip";
   return "unknown";
 }

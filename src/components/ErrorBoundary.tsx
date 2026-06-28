@@ -30,6 +30,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           </p>
           <button
             type="button"
+            autoFocus
             onClick={() => window.location.reload()}
             className="mt-lg inline-flex min-h-[40px] items-center justify-center rounded-pill bg-[image:var(--brand-gradient)] px-lg font-semibold text-on-brand shadow-subtle transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
           >
