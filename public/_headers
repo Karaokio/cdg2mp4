@@ -1,11 +1,12 @@
 # Security headers for static hosts that read a _headers file (e.g. Cloudflare Pages).
 # The CSP is shaped around ffmpeg.wasm: the core is fetched same-origin and runs
 # from a blob: worker, and WebAssembly needs 'wasm-unsafe-eval'. Converted videos
-# and font/image assets use blob:/data:. PostHog (bundled from npm) sends events via
-# connect-src. The Tally feedback popup loads its widget script + an iframe form from
-# tally.so. Everything else is 'self'.
+# and font/image assets use blob:/data:. PostHog sends events via connect-src and
+# lazy-loads helper scripts (remote config, exception capture, surveys) from its asset
+# host, so us-assets.i.posthog.com is in script-src too. The Tally feedback popup loads
+# its widget script + an iframe form from tally.so. Everything else is 'self'.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://tally.so; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tally.so; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data: https://us.i.posthog.com https://us-assets.i.posthog.com https://tally.so; frame-src https://tally.so; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://tally.so https://us-assets.i.posthog.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tally.so; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: data: https://us.i.posthog.com https://us-assets.i.posthog.com https://tally.so; frame-src https://tally.so; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
