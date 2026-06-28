@@ -8,8 +8,6 @@ export const feedbackEnabled = !!FORM_URL;
 // Robustly take the last path segment of the form URL, ignoring any query/hash.
 const FORM_ID = FORM_URL ? (new URL(FORM_URL).pathname.split("/").filter(Boolean).pop() ?? "") : "";
 
-export const FEEDBACK_DISMISSED_KEY = "cdg2mp4_feedback_dismissed";
-
 declare global {
   interface Window {
     Tally?: {
@@ -78,20 +76,18 @@ export function hostedUrl(ctx: FeedbackContext): string {
   return u.toString();
 }
 
-export function markDismissed(): void {
-  try {
-    localStorage.setItem(FEEDBACK_DISMISSED_KEY, "1");
-  } catch {
-    /* storage disabled: ignore */
-  }
+// Dismissal is in-memory and for the current visit only, not persisted. The footer
+// "Share feedback" entry point is always available regardless; this only stops the
+// after-conversion nudge from reappearing once it's been dismissed or submitted this
+// visit. A reload starts fresh.
+let dismissedThisSession = false;
+
+export function dismissFeedback(): void {
+  dismissedThisSession = true;
 }
 
-export function feedbackDismissed(): boolean {
-  try {
-    return localStorage.getItem(FEEDBACK_DISMISSED_KEY) === "1";
-  } catch {
-    return false;
-  }
+export function isFeedbackDismissed(): boolean {
+  return dismissedThisSession;
 }
 
 /** Open the in-page Tally modal. Assumes the widget is loaded (see tallyReady). */
@@ -104,11 +100,10 @@ export function openPopup(ctx: FeedbackContext, onSubmitted?: () => void): void 
     layout: "modal",
     width: 600,
     emoji: reduceMotion ? undefined : { text: "🎶", animation: "wave" },
-    autoClose: 2000,
-    doNotShowAfterSubmit: true,
+    autoClose: 2000, // close the modal a moment after submit (no page redirect)
     hiddenFields: fields(ctx),
     onSubmit: () => {
-      markDismissed();
+      dismissFeedback();
       track("feedback_submitted", { trigger: ctx.trigger });
       onSubmitted?.();
     },
