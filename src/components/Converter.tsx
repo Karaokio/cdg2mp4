@@ -92,16 +92,23 @@ export function Converter() {
       const inputType: InputType = files.some((f) => f.name.toLowerCase().endsWith(".zip"))
         ? "zip"
         : "pair";
+      // The dropped/selected filenames, captured up front (contents never leave the device).
+      const pick = (ext: RegExp) => fileName(files.find((f) => ext.test(f.name))?.name);
+      const inputNames = {
+        zip_name: pick(/\.zip$/i),
+        cdg_name: pick(/\.cdg$/i),
+        mp3_name: pick(/\.mp3$/i),
+      };
       const t0 = Date.now();
       let stage = "read";
-      let name: string | undefined;
+      let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
-      trackConversionStarted({ input_type: inputType, resolution });
+      trackConversionStarted({ input_type: inputType, resolution, ...inputNames });
       try {
         setPhase("Reading files…");
         const pair = await filesToPair(files);
-        name = fileName(pair.baseName);
+        outputName = fileName(`${pair.baseName}.mp4`);
 
         stage = "load";
         setPhase("Loading converter…");
@@ -128,7 +135,8 @@ export function Converter() {
           resolution,
           duration_ms: Date.now() - t0,
           output_mb_bucket: mbBucket(blob.size),
-          file_name: name,
+          ...inputNames,
+          output_name: outputName,
         });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -139,7 +147,8 @@ export function Converter() {
           resolution,
           stage,
           reason: classifyError(message),
-          file_name: name,
+          ...inputNames,
+          output_name: outputName,
         });
       } finally {
         setConverting(false); // idle again; a pending update may now auto-apply

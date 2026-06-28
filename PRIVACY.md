@@ -11,8 +11,8 @@ collect a small amount of anonymous usage data and any feedback you choose to se
 - Conversion events: started / succeeded / failed, with properties like the chosen
   resolution, input type (zip vs. file pair), how long it took, and a coarse output-size
   bucket.
-- The **input file name** (the song), which is metadata about the file, never the file's
-  contents.
+- The **filenames** involved (the `.zip` / `.cdg` / `.mp3` you drop in, and the resulting
+  `.mp4`), which are metadata about the files, never their contents.
 - A few app interactions: download, save/remove offline, install, update.
 - Standard analytics context (approximate location from IP, browser/device, referrer). We do
   not ask for your name or set you up with an account. Known bot/headless traffic is filtered

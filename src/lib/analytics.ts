@@ -47,26 +47,39 @@ export function captureException(error: unknown, props?: Props): void {
 
 export type InputType = "zip" | "pair"; // a .zip, or a loose .cdg + .mp3 file pair
 
-export const trackConversionStarted = (p: { input_type: InputType; resolution: string }) =>
-  track("conversion_started", p);
+// Filenames involved in a conversion (never the file contents), all with extensions:
+// zip/cdg/mp3 are the dropped inputs (known at kickoff); output_name is the resulting
+// <song>.mp4, which reveals the song (e.g. when the input is a catalog-coded zip).
+type ConvFiles = {
+  zip_name?: string;
+  cdg_name?: string;
+  mp3_name?: string;
+  output_name?: string;
+};
 
-export const trackConversionSucceeded = (p: {
-  input_type: InputType;
-  resolution: string;
-  duration_ms: number;
-  output_mb_bucket: string;
-  file_name?: string; // the input filename (file contents never leave the device)
-}) => track("conversion_succeeded", p);
+export const trackConversionStarted = (
+  p: { input_type: InputType; resolution: string } & ConvFiles
+) => track("conversion_started", p);
 
-export const trackConversionFailed = (p: {
-  input_type: InputType;
-  resolution: string;
-  stage: string;
-  reason: string;
-  file_name?: string;
-}) => track("conversion_failed", p);
+export const trackConversionSucceeded = (
+  p: {
+    input_type: InputType;
+    resolution: string;
+    duration_ms: number;
+    output_mb_bucket: string;
+  } & ConvFiles
+) => track("conversion_succeeded", p);
 
-/** The input filename (base name, no extension), trimmed and length-capped. */
+export const trackConversionFailed = (
+  p: {
+    input_type: InputType;
+    resolution: string;
+    stage: string;
+    reason: string;
+  } & ConvFiles
+) => track("conversion_failed", p);
+
+/** A filename, trimmed and length-capped (no contents, just the name). */
 export function fileName(baseName: string | undefined): string | undefined {
   const name = baseName?.trim();
   return name ? name.slice(0, 120) : undefined;

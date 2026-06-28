@@ -87,8 +87,9 @@ The conversion is 100% local: your karaoke **file contents are never uploaded** 
 no backend or account. The app does collect a little to help improve it:
 
 - **Anonymous product analytics** ([PostHog](https://posthog.com)): conversion events with
-  properties like resolution, input type, duration, and the **input file name** (the song),
-  never the file contents. No exact file sizes; bot traffic is filtered out.
+  properties like resolution, input type, duration, and the **filenames** (the zip / cdg / mp3
+  you drop and the resulting mp4), never the file contents. No exact file sizes; bot traffic
+  is filtered out.
 - **Feedback you choose to send** ([Tally](https://tally.so)): only what you type into the
   feedback form, plus the build/context it was sent from.
 
