@@ -58,10 +58,16 @@ const Dot = ({ className, pulse }: { className: string; pulse?: boolean }) => (
 );
 
 export function OfflineStatus() {
+  const [registration, setRegistration] = React.useState<ServiceWorkerRegistration>();
+
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    onRegisteredSW(_swUrl, r) {
+      if (r) setRegistration(r);
+    },
+  });
 
   const supported =
     typeof navigator !== "undefined" && "serviceWorker" in navigator && "caches" in window;
@@ -112,6 +118,29 @@ export function OfflineStatus() {
     apply(); // idle right now? apply immediately
     return subscribeConverting(apply); // otherwise apply when the conversion ends
   }, [needRefresh, updateServiceWorker]);
+
+  // An already-open tab won't notice a new deploy on its own (the browser only checks
+  // the service worker on a fresh navigation). So re-check when the user returns to the
+  // tab — event-driven, not a background poll — and throttle it so frequent tab-switching
+  // makes at most one tiny (usually 304) sw.js request every 30 min. Anything found flows
+  // into needRefresh above and auto-applies when idle. No periodic network when idle.
+  React.useEffect(() => {
+    if (!registration) return;
+    let last = 0;
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - last < 30 * 60 * 1000) return;
+      last = now;
+      void registration.update().catch(() => {});
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [registration]);
 
   if (!supported) return null;
 
