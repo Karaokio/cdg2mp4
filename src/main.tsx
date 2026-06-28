@@ -14,8 +14,12 @@ import "@fontsource/geist-mono/400.css";
 import "./styles/index.css";
 import { APP_NAME, COMPANY, APP_VERSION, BUILD_COMMIT, BUILD_TIME } from "@/lib/buildInfo";
 import { initAnalytics } from "@/lib/analytics";
+import { installDomGuard } from "@/lib/domGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "@/App";
+
+// Must run before React renders: survive page-translation DOM mutation.
+installDomGuard();
 
 // Build-info traceability in the console.
 console.info(
