@@ -1,8 +1,8 @@
 import * as React from "react";
 import {
   feedbackEnabled,
-  feedbackDismissed,
-  markDismissed,
+  isFeedbackDismissed,
+  dismissFeedback,
   hostedUrl,
   preloadTally,
   tallyReady,
@@ -118,7 +118,7 @@ export function FeedbackPrompt({
   resolution?: string;
   input_type?: string;
 }) {
-  const [dismissed, setDismissed] = React.useState(feedbackDismissed);
+  const [dismissed, setDismissed] = React.useState(isFeedbackDismissed);
   const trigger = result === "success" ? "after_success" : "after_failure";
   // Submitting via the popup hides the live nudge too (not just on the next visit).
   const { anchor, offline } = useFeedbackTrigger({ trigger, result, resolution, input_type }, () =>
@@ -133,7 +133,7 @@ export function FeedbackPrompt({
       : "That didn't work. Tell us what you tried?";
 
   const dismiss = () => {
-    markDismissed();
+    dismissFeedback();
     setDismissed(true);
   };
 
