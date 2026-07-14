@@ -3,7 +3,7 @@ export type Theme = "light" | "dark";
 /** Same key the pre-paint script in index.html reads. */
 export const THEME_STORAGE_KEY = "karaokio-theme";
 
-/** Saved choice wins; otherwise follow the OS preference. */
+/** Saved choice wins; new users get light. */
 export function getInitialTheme(): Theme {
   try {
     // window-qualified: Node exposes a bare `localStorage` global that
@@ -13,7 +13,7 @@ export function getInitialTheme(): Theme {
   } catch {
     // localStorage can throw in private/locked-down modes; fall through.
   }
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 }
 
 /** Flip the token layer (semantic.css keys off [data-theme]) and persist. */

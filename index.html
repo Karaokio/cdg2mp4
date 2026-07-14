@@ -14,13 +14,12 @@
     />
     <title>cdg2mp4 — CDG-to-MP4 Karaoke Converter by Karaokio</title>
     <script>
-      // Set the theme before first paint: saved choice, else OS preference.
-      // Key must match THEME_STORAGE_KEY in src/lib/theme.ts.
+      // Apply a saved dark choice before first paint; the html attribute
+      // already defaults to light. Key must match THEME_STORAGE_KEY in
+      // src/lib/theme.ts.
       try {
-        var t = localStorage.getItem("karaokio-theme");
-        if (t !== "light" && t !== "dark")
-          t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        document.documentElement.dataset.theme = t;
+        if (localStorage.getItem("karaokio-theme") === "dark")
+          document.documentElement.dataset.theme = "dark";
       } catch (e) {}
     </script>
   </head>
