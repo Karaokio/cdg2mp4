@@ -68,6 +68,11 @@
   --tracking-normal: var(--ko-tracking-normal);
 
   /* ---- Spacing  →  p-* / m-* / gap-* (named, alongside the numeric scale) - */
+  /* ⚠ GOTCHA: these names shadow Tailwind's sizing keywords in WIDTH utilities.
+     `max-w-xs` resolves to --spacing-xs (4px!), not the 20rem container size —
+     same for w-*, max-w-*, min-w-* with xs/sm/md/lg/xl/2xl/3xl. For widths, use
+     arbitrary values (`max-w-[20rem]`) or numeric steps (`w-40`). Padding, gap,
+     and margin utilities are the intended consumers of these names. */
   --spacing-xs:  var(--ko-space-xs);
   --spacing-sm:  var(--ko-space-sm);
   --spacing-md:  var(--ko-space-md);

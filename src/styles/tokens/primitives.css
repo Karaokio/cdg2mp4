@@ -22,18 +22,18 @@
   --ko-cream-300: #ECE0D8;  /* warm border                                 */
   --ko-cream-400: #E9E4DE;  /* sunken background behind the app frame      */
 
-  /* ---- Warm neutrals · dark "stage" (recovered original night theme) ----- */
-  --ko-stage-950: #0E0A09;  /* sunken                                      */
-  --ko-stage-900: #15100F;  /* background                                  */
-  --ko-stage-800: #211A19;  /* surface                                     */
-  --ko-stage-700: #2C2422;  /* raised surface                              */
-  --ko-stage-600: #3A2F2D;  /* border                                      */
+  /* ---- Cool neutrals · dark "midnight" (chosen 2026-07-14; replaced warm "stage") ----- */
+  --ko-night-950: #090B0F;  /* sunken                                      */
+  --ko-night-900: #0E1116;  /* background                                  */
+  --ko-night-800: #171B22;  /* surface                                     */
+  --ko-night-700: #20252E;  /* raised surface                              */
+  --ko-night-600: #313845;  /* border                                      */
 
   /* ---- Ink (text) -------------------------------------------------------- */
   --ko-ink-900:   #241A17;  /* primary text on light                       */
   --ko-ink-500:   #6B5A50;  /* muted text on light (>=4.5:1 on cream/white) */
-  --ko-paper-50:  #F5EFEC;  /* primary text on dark                        */
-  --ko-paper-300: #A8988F;  /* muted text on dark                          */
+  --ko-frost-50:  #EEF1F5;  /* primary text on dark                        */
+  --ko-frost-300: #8D97A5;  /* muted text on dark                          */
 
   /* ---- Status ------------------------------------------------------------ */
   --ko-amber-500: #F39B12;  /* spotlight (light)                           */

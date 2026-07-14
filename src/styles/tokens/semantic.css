@@ -48,16 +48,16 @@
 }
 
 [data-theme="dark"] {
-  /* ---- Surfaces (recovered "stage" palette) ------------------------------ */
-  --background:        var(--ko-stage-900);
-  --background-sunken: var(--ko-stage-950);
-  --surface:           var(--ko-stage-800);
-  --surface-raised:    var(--ko-stage-700);
-  --border:            var(--ko-stage-600);
+  /* ---- Surfaces ("midnight" palette) ------------------------------ */
+  --background:        var(--ko-night-900);
+  --background-sunken: var(--ko-night-950);
+  --surface:           var(--ko-night-800);
+  --surface-raised:    var(--ko-night-700);
+  --border:            var(--ko-night-600);
 
   /* ---- Text -------------------------------------------------------------- */
-  --text:        var(--ko-paper-50);
-  --text-muted:  var(--ko-paper-300);
+  --text:        var(--ko-frost-50);
+  --text-muted:  var(--ko-frost-300);
   --text-onbrand: #FFFFFF;
 
   /* ---- Brand (red holds; label/spotlight brighten for dark) -------------- */
