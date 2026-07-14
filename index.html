@@ -13,6 +13,16 @@
       content="Convert karaoke CDG+MP3 files to MP4 video, right in your browser. Free and works offline."
     />
     <title>cdg2mp4 — CDG-to-MP4 Karaoke Converter by Karaokio</title>
+    <script>
+      // Set the theme before first paint: saved choice, else OS preference.
+      // Key must match THEME_STORAGE_KEY in src/lib/theme.ts.
+      try {
+        var t = localStorage.getItem("karaokio-theme");
+        if (t !== "light" && t !== "dark")
+          t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
