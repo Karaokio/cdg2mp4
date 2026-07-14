@@ -4,6 +4,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { SocialLinks } from "@/components/SocialLinks";
 import { BuildInfo } from "@/components/BuildInfo";
 import { FeedbackLink } from "@/components/Feedback";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Label } from "@/components/ui";
 
 export default function App() {
@@ -23,7 +24,11 @@ export default function App() {
           </p>
         </header>
 
-        <Converter />
+        <div className="relative">
+          {/* Corner of the card, on the Quality picker row. */}
+          <ThemeToggle className="absolute right-[var(--card-padding)] top-[var(--card-padding)] z-10" />
+          <Converter />
+        </div>
 
         <div className="flex flex-wrap items-center justify-center gap-sm">
           <OfflineStatus />
