@@ -1,4 +1,5 @@
 import { APP_NAME, BUILD_COMMIT } from "./buildInfo";
+import { getInitialTheme } from "./theme";
 
 // PostHog product analytics. Off unless a publishable project key is configured,
 // so dev, local builds, and tests stay silent. The key is a client-side key by
@@ -25,8 +26,9 @@ export async function initAnalytics(): Promise<void> {
       disable_session_recording: true,
       capture_exceptions: true, // auto-report uncaught errors + unhandled rejections
     });
-    // Tag every event with the app name + exact build (see src/lib/buildInfo.ts).
-    posthog.register({ app: APP_NAME, build: BUILD_COMMIT });
+    // Tag every event with the app name, exact build (see src/lib/buildInfo.ts),
+    // and active theme, so light/dark usage falls out of any event breakdown.
+    posthog.register({ app: APP_NAME, build: BUILD_COMMIT, theme: getInitialTheme() });
     ph = posthog;
   } catch {
     /* analytics is best-effort; a failed load must never break the app */
@@ -38,6 +40,11 @@ type Props = Record<string, string | number | boolean | undefined>;
 /** Capture an event. No-ops until analytics is loaded + enabled. */
 export function track(event: string, props?: Props): void {
   ph?.capture(event, props);
+}
+
+/** Keep the `theme` super property current so subsequent events carry the new value. */
+export function setAnalyticsTheme(theme: "light" | "dark"): void {
+  ph?.register({ theme });
 }
 
 /** Report a caught error (e.g. from the React error boundary). No-ops when disabled. */
