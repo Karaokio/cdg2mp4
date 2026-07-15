@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { applyTheme, getInitialTheme, type Theme } from "@/lib/theme";
-import { track } from "@/lib/analytics";
+import { setAnalyticsTheme, track } from "@/lib/analytics";
 
 function SunIcon() {
   return (
@@ -48,6 +48,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
+    setAnalyticsTheme(next); // before track, so the event itself carries the new theme
     track("theme_toggled", { theme: next });
   };
 
