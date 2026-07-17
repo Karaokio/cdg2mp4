@@ -64,8 +64,9 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
       </summary>
       <div className="mt-md flex flex-col gap-sm text-left">
         <p>
-          This site uses ffmpeg compiled for your browser. The same conversion can run on your own
-          machine with the following command:
+          This site uses ffmpeg compiled for your browser.
+          <br />
+          The same conversion can run on your own machine with the following command:
         </p>
         <div className="flex items-center gap-sm">
           <pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-words rounded-[3px] bg-background-sunken px-md py-sm font-mono text-xs leading-relaxed text-brand-label">
