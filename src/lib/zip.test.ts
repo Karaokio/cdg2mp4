@@ -1,9 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { zipSync } from "fflate";
-import { extractPairFromZip, pairFromFiles } from "./zip";
+import { extractPairFromZip, pairFromFiles, ZipPairError } from "./zip";
 
 const u8 = (...bytes: number[]) => new Uint8Array(bytes);
 const makeZip = (entries: Record<string, Uint8Array>) => zipSync(entries);
+
+/** Run extractPairFromZip on bytes expected to fail; assert it's a ZipPairError. */
+function catchZipError(bytes: Uint8Array): ZipPairError {
+  try {
+    extractPairFromZip(bytes);
+  } catch (e) {
+    expect(e).toBeInstanceOf(ZipPairError);
+    return e as ZipPairError;
+  }
+  throw new Error("expected extractPairFromZip to throw");
+}
 
 describe("extractPairFromZip", () => {
   it("extracts the cdg + mp3 and derives the base name from the cdg", () => {
@@ -25,16 +36,30 @@ describe("extractPairFromZip", () => {
     expect(pair.cdg[0]).toBe(1);
   });
 
-  it("throws when the cdg is missing", () => {
-    expect(() => extractPairFromZip(makeZip({ "song.mp3": u8(1) }))).toThrow(/no \.cdg/i);
+  it("throws when the cdg is missing, reporting the extensions found", () => {
+    const zip = makeZip({ "song.mp3": u8(1), "cover.jpg": u8(2) });
+    const err = catchZipError(zip);
+    expect(err.message).toMatch(/no \.cdg/i);
+    expect(err.extensions).toEqual(["jpg", "mp3"]);
   });
 
-  it("throws when the mp3 is missing", () => {
-    expect(() => extractPairFromZip(makeZip({ "song.cdg": u8(1) }))).toThrow(/no \.mp3/i);
+  it("recognises a video-karaoke zip (video files, no cdg)", () => {
+    const zip = makeZip({ "song.mp4": u8(1), "song.mp3": u8(2) });
+    const err = catchZipError(zip);
+    expect(err.message).toMatch(/already a karaoke video/i);
+    expect(err.extensions).toEqual(["mp3", "mp4"]);
   });
 
-  it("throws a friendly error on corrupt zip bytes", () => {
-    expect(() => extractPairFromZip(u8(1, 2, 3, 4))).toThrow(/valid \.zip/i);
+  it("throws when the mp3 is missing, reporting the extensions found", () => {
+    const err = catchZipError(makeZip({ "song.cdg": u8(1) }));
+    expect(err.message).toMatch(/no \.mp3/i);
+    expect(err.extensions).toEqual(["cdg"]);
+  });
+
+  it("throws a friendly error on corrupt zip bytes, with no extensions", () => {
+    const err = catchZipError(u8(1, 2, 3, 4));
+    expect(err.message).toMatch(/valid \.zip/i);
+    expect(err.extensions).toBeUndefined();
   });
 
   it("rejects an empty stream inside the zip", () => {

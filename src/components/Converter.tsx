@@ -3,7 +3,7 @@ import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
-import { extractPairFromZip, pairFromFiles, type CdgPair } from "@/lib/zip";
+import { extractPairFromZip, pairFromFiles, ZipPairError, type CdgPair } from "@/lib/zip";
 import { setConverting } from "@/lib/converting";
 import { FeedbackPrompt } from "@/components/Feedback";
 import {
@@ -149,6 +149,7 @@ export function Converter() {
           stage,
           reason: classifyError(message),
           ...errorDetail(e),
+          zip_extensions: e instanceof ZipPairError ? e.extensions?.join(",") : undefined,
           ...inputNames,
           output_name: outputName,
         });
