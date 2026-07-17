@@ -85,6 +85,8 @@ export const trackConversionFailed = (
     reason: string;
     error_name?: string;
     error_message?: string;
+    /** Extensions found inside a rejected zip (comma-joined), e.g. "mp4,txt". */
+    zip_extensions?: string;
   } & ConvFiles
 ) => track("conversion_failed", p);
 
@@ -127,6 +129,9 @@ export function classifyError(message: string): string {
   if (/exit code/i.test(message)) return "ffmpeg_error";
   if (/produced an empty/i.test(message)) return "empty_output";
   if (/Drop a karaoke|matching|file is empty/i.test(message)) return "bad_input";
+  if (/valid \.zip/i.test(message)) return "invalid_zip";
+  if (/no \.cdg file/i.test(message)) return "zip_missing_cdg";
+  if (/no \.mp3 file/i.test(message)) return "zip_missing_mp3";
   if (/zip/i.test(message)) return "bad_zip";
   return "unknown";
 }
