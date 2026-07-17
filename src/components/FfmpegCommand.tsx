@@ -114,7 +114,11 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
               <code className="font-mono">winget install ffmpeg</code> on Windows
             </li>
           </ul>
-          <p>Converting a .zip? Extract it first.</p>
+          <p>
+            Converting a .zip? Extract it first to get the separate{" "}
+            <code className="font-mono">.cdg</code> and <code className="font-mono">.mp3</code>{" "}
+            files the command needs.
+          </p>
         </div>
       </div>
     </details>
