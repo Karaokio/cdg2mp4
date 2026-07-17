@@ -38,6 +38,19 @@ describe("Converter pair completion", () => {
     expect(screen.getByText("song.mp4")).toBeInTheDocument();
   });
 
+  it("clears a held file via Start over, returning to the initial dropzone", async () => {
+    const { container } = render(<Converter />);
+    await userEvent.upload(fileInput(container), file("song.mp3"));
+    await screen.findByText(/now add the matching/i);
+    await userEvent.click(screen.getByRole("button", { name: /start over/i }));
+    expect(await screen.findByText(/drag a karaoke \.zip/i)).toBeInTheDocument();
+    expect(screen.queryByText("song.mp3")).not.toBeInTheDocument();
+    // The held mp3 must be gone: a fresh cdg drop should hold, not convert.
+    await userEvent.upload(fileInput(container), file("song.cdg"));
+    expect(await screen.findByText(/now add the matching/i)).toBeInTheDocument();
+    expect(container.querySelector("video")).not.toBeInTheDocument();
+  });
+
   it("rejects unusable files, naming the extensions", async () => {
     const { container } = render(<Converter />);
     await userEvent.upload(fileInput(container), [file("notes.txt")], { applyAccept: false });

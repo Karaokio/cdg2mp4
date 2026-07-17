@@ -266,9 +266,23 @@ export function Converter() {
                 <br />
                 Drop its partner here to start converting.
               </p>
-              <Button variant="primary" type="button" className="mt-sm">
-                Choose file
-              </Button>
+              <div className="mt-sm flex gap-sm">
+                <Button variant="primary" type="button">
+                  Choose file
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={(e) => {
+                    // Don't bubble to the dropzone (which opens the file picker).
+                    e.stopPropagation();
+                    setHeld(null);
+                    track("lone_file_cleared", { file_kind: held.kind });
+                  }}
+                >
+                  Start over
+                </Button>
+              </div>
             </>
           ) : (
             <>
