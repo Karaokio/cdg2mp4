@@ -37,7 +37,10 @@ describe("Converter pair completion", () => {
     await screen.findByText(/now add the matching/i);
     await userEvent.upload(fileInput(container), file("song.cdg"));
     await waitFor(() => expect(container.querySelector("video")).toBeInTheDocument());
-    expect(screen.getByText("song.mp4")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /download mp4/i })).toHaveAttribute(
+      "download",
+      "song.mp4"
+    );
   });
 
   it("clears a held file via Start over, returning to the initial dropzone", async () => {
