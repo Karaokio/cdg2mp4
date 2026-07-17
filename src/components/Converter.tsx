@@ -7,6 +7,7 @@ import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
 import { FeedbackPrompt } from "@/components/Feedback";
+import { FfmpegCommand, type CommandNames } from "@/components/FfmpegCommand";
 import {
   trackConversionStarted,
   trackConversionSucceeded,
@@ -67,6 +68,8 @@ export function Converter() {
   const [dragging, setDragging] = React.useState(false);
   const [held, setHeld] = React.useState<Held<File> | null>(null);
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
+  // Real filenames for the "run it locally" command, once a conversion knows them.
+  const [lastNames, setLastNames] = React.useState<CommandNames | undefined>();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
   const cancelled = React.useRef(false); // user hit Cancel during this run
@@ -111,6 +114,11 @@ export function Converter() {
             ? extractPairFromZip(await read(input.zip))
             : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
+        setLastNames(
+          input.type === "zip"
+            ? { cdg: `${pair.baseName}.cdg`, mp3: `${pair.baseName}.mp3` }
+            : { cdg: input.cdg.name, mp3: input.mp3.name }
+        );
 
         stage = "load";
         setPhase("Loading converter…");
@@ -389,6 +397,21 @@ export function Converter() {
           </div>
           <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
         </div>
+      )}
+
+      {/* Local-ffmpeg disclosure for advanced users (never during a conversion). */}
+      {(status === "idle" || status === "done") && (
+        <FfmpegCommand
+          resolution={resolution}
+          names={
+            lastNames ??
+            (held
+              ? held.kind === "cdg"
+                ? { cdg: held.file.name }
+                : { mp3: held.file.name }
+              : undefined)
+          }
+        />
       )}
     </Surface>
   );
