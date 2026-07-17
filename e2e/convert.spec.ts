@@ -24,6 +24,14 @@ test("converts a loose .cdg + .mp3 pair", async ({ page }) => {
   await expect(page.getByRole("link", { name: /download mp4/i })).toBeVisible();
 });
 
+test("completes a pair dropped one file at a time", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('input[type="file"]').setInputFiles(sampleMp3);
+  await expect(page.getByText(/now add the matching/i)).toBeVisible();
+  await page.locator('input[type="file"]').setInputFiles(sampleCdg);
+  await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
+});
+
 test("works offline after the first conversion", async ({ page, context }) => {
   await page.goto("/");
   await page.evaluate(() => navigator.serviceWorker.ready);

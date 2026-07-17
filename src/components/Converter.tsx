@@ -3,7 +3,8 @@ import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { convertCdgToMp4 } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
-import { extractPairFromZip, pairFromFiles, ZipPairError, type CdgPair } from "@/lib/zip";
+import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
+import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
 import { FeedbackPrompt } from "@/components/Feedback";
 import {
@@ -22,17 +23,11 @@ type Status = "idle" | "working" | "done" | "error";
 
 const read = async (f: File) => new Uint8Array(await f.arrayBuffer());
 
-/** Turn dropped/selected files into a {cdg, mp3} pair (zip or loose files). */
-async function filesToPair(files: File[]): Promise<CdgPair> {
-  const zip = files.find((f) => f.name.toLowerCase().endsWith(".zip"));
-  if (zip) return extractPairFromZip(await read(zip));
+/** A complete conversion input: a zip, or a cdg+mp3 pair (possibly completed
+ * from a file held back from an earlier lone drop, see selectInput). */
+type RunInput = { type: "zip"; zip: File } | { type: "pair"; cdg: File; mp3: File };
 
-  const cdg = files.find((f) => f.name.toLowerCase().endsWith(".cdg"));
-  const mp3 = files.find((f) => f.name.toLowerCase().endsWith(".mp3"));
-  if (cdg && mp3) return pairFromFiles(await read(cdg), await read(mp3), cdg.name);
-
-  throw new Error("Drop a karaoke .zip, or a matching .cdg and .mp3 together.");
-}
+const partnerExt = (kind: "cdg" | "mp3") => (kind === "cdg" ? ".mp3" : ".cdg");
 
 function ResolutionPicker({ value, onChange }: { value: ResKey; onChange: (r: ResKey) => void }) {
   return (
@@ -69,6 +64,7 @@ export function Converter() {
   const [error, setError] = React.useState("");
   const [result, setResult] = React.useState<{ url: string; name: string } | null>(null);
   const [dragging, setDragging] = React.useState(false);
+  const [held, setHeld] = React.useState<Held<File> | null>(null);
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
@@ -81,7 +77,7 @@ export function Converter() {
   }, [result]);
 
   const run = React.useCallback(
-    async (files: File[]) => {
+    async (input: RunInput) => {
       if (result) URL.revokeObjectURL(result.url);
       setResult(null);
       setError("");
@@ -89,17 +85,14 @@ export function Converter() {
       setEta(0);
       startedAt.current = null;
       setStatus("working");
+      setHeld(null); // consumed by this conversion, or superseded by a zip
 
-      const inputType: InputType = files.some((f) => f.name.toLowerCase().endsWith(".zip"))
-        ? "zip"
-        : "pair";
-      // The dropped/selected filenames, captured up front (contents never leave the device).
-      const pick = (ext: RegExp) => fileName(files.find((f) => ext.test(f.name))?.name);
-      const inputNames = {
-        zip_name: pick(/\.zip$/i),
-        cdg_name: pick(/\.cdg$/i),
-        mp3_name: pick(/\.mp3$/i),
-      };
+      const inputType: InputType = input.type;
+      // The input filenames, captured up front (contents never leave the device).
+      const inputNames =
+        input.type === "zip"
+          ? { zip_name: fileName(input.zip.name) }
+          : { cdg_name: fileName(input.cdg.name), mp3_name: fileName(input.mp3.name) };
       const t0 = Date.now();
       let stage = "read";
       let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
@@ -108,7 +101,10 @@ export function Converter() {
       trackConversionStarted({ input_type: inputType, resolution, ...inputNames });
       try {
         setPhase("Reading files…");
-        const pair = await filesToPair(files);
+        const pair =
+          input.type === "zip"
+            ? extractPairFromZip(await read(input.zip))
+            : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
 
         stage = "load";
@@ -160,10 +156,37 @@ export function Converter() {
     [result, resolution]
   );
 
+  // Route dropped/selected files: start a conversion when the input is
+  // complete, hold a lone .cdg/.mp3 and ask for its partner, reject the rest.
+  const onFiles = React.useCallback(
+    (files: File[]) => {
+      const sel = selectInput(files, held);
+      if (sel.type === "hold") {
+        setHeld({ kind: sel.kind, file: sel.file });
+        setError("");
+        setStatus("idle");
+        track("lone_file_held", { file_kind: sel.kind, file_name: fileName(sel.file.name) });
+        return;
+      }
+      if (sel.type === "reject") {
+        const exts = sel.extensions.filter((x) => x !== "none").map((x) => `.${x}`);
+        setError(
+          `Can't convert ${exts.length ? `${exts.join(" / ")} files` : "those files"}. ` +
+            "Drop a karaoke .zip, or a matching .cdg and .mp3 together."
+        );
+        setStatus("error");
+        track("input_rejected", { extensions: sel.extensions.join(",") });
+        return;
+      }
+      void run(sel);
+    },
+    [held, run]
+  );
+
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-selecting the same file
-    if (files.length && status !== "working") void run(files);
+    if (files.length && status !== "working") onFiles(files);
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -171,7 +194,7 @@ export function Converter() {
     setDragging(false);
     if (status === "working") return; // don't start a second conversion mid-run
     const files = Array.from(e.dataTransfer.files ?? []);
-    if (files.length) void run(files);
+    if (files.length) onFiles(files);
   };
 
   const working = status === "working";
@@ -231,6 +254,21 @@ export function Converter() {
               ) : (
                 <p className="text-sm text-text-muted">Hang tight, this can take a moment.</p>
               )}
+            </>
+          ) : held ? (
+            <>
+              <Label>Almost there</Label>
+              <p className="font-display text-xl font-bold">
+                Now add the matching <code className="font-mono">{partnerExt(held.kind)}</code> file
+              </p>
+              <p className="max-w-[42ch] text-base text-text-muted break-all">
+                Got <code className="font-mono">{held.file.name}</code>.
+                <br />
+                Drop its partner here to start converting.
+              </p>
+              <Button variant="primary" type="button" className="mt-sm">
+                Choose file
+              </Button>
             </>
           ) : (
             <>
