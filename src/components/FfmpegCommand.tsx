@@ -119,6 +119,13 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
             <code className="font-mono">.cdg</code> and <code className="font-mono">.mp3</code>{" "}
             files the command needs.
           </p>
+          <p className="mt-sm">
+            Need more help? Email{" "}
+            <a href="mailto:support@karaokio.com" className="underline hover:text-text">
+              support@karaokio.com
+            </a>
+            .
+          </p>
         </div>
       </div>
     </details>
