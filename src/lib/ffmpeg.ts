@@ -70,9 +70,18 @@ export async function convertCdgToMp4(
   let instance: FFmpeg;
   try {
     instance = await loadFFmpeg();
-  } catch {
+  } catch (err) {
     busy = false;
-    throw new Error("Could not load the converter. Check your connection and try again.");
+    // A failed fetch is either our own status throw ("converter core") or the
+    // browser's network TypeError ("Failed to fetch" / "NetworkError when
+    // attempting to fetch resource."); everything else is worker/wasm setup.
+    const isDownload = err instanceof Error && /converter core|fetch/i.test(err.message);
+    throw new Error(
+      isDownload
+        ? "Could not download the converter. Check your connection and try again."
+        : "Could not load the converter. Try again, or try a different browser.",
+      { cause: err }
+    );
   }
 
   const onProgress = ({ progress }: { progress: number }) => {

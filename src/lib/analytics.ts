@@ -83,8 +83,24 @@ export const trackConversionFailed = (
     resolution: string;
     stage: string;
     reason: string;
+    error_name?: string;
+    error_message?: string;
   } & ConvFiles
 ) => track("conversion_failed", p);
+
+/**
+ * The name + truncated message of an error's underlying `cause`, for failure
+ * events. User-facing messages are generic on purpose (see classifyError);
+ * the cause is the real error (fetch/wasm/worker), which is what makes a
+ * failure diagnosable. Empty when there is no Error cause attached.
+ */
+export function errorDetail(e: unknown): { error_name?: string; error_message?: string } {
+  if (!(e instanceof Error) || e.cause === undefined) return {};
+  const cause = e.cause;
+  return cause instanceof Error
+    ? { error_name: cause.name, error_message: cause.message.slice(0, 200) }
+    : { error_name: "NonError", error_message: String(cause).slice(0, 200) };
+}
 
 /** A filename, trimmed and length-capped (no contents, just the name). */
 export function fileName(baseName: string | undefined): string | undefined {
@@ -106,7 +122,8 @@ export function mbBucket(bytes: number): string {
 // since the "drop the right files" and "file is empty" messages also contain ".zip".
 export function classifyError(message: string): string {
   if (/already in progress/i.test(message)) return "busy";
-  if (/load the converter|converter core/i.test(message)) return "load_failed";
+  if (/load the converter|download the converter|converter core/i.test(message))
+    return "load_failed";
   if (/exit code/i.test(message)) return "ffmpeg_error";
   if (/produced an empty/i.test(message)) return "empty_output";
   if (/Drop a karaoke|matching|file is empty/i.test(message)) return "bad_input";

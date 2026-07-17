@@ -13,6 +13,7 @@ import {
   track,
   mbBucket,
   classifyError,
+  errorDetail,
   fileName,
   type InputType,
 } from "@/lib/analytics";
@@ -147,6 +148,7 @@ export function Converter() {
           resolution,
           stage,
           reason: classifyError(message),
+          ...errorDetail(e),
           ...inputNames,
           output_name: outputName,
         });
