@@ -16,6 +16,8 @@ describe("classifyError", () => {
     ["No .mp3 file found in the zip.", "zip_missing_mp3"],
     ["some other zip problem", "bad_zip"],
     ["A conversion is already in progress. Please wait for it to finish.", "busy"],
+    ["Conversion cancelled.", "cancelled"],
+    ["called FFmpeg.terminate()", "cancelled"],
     ["Could not load the converter. Try again, or try a different browser.", "load_failed"],
     ["Could not download the converter. Check your connection and try again.", "load_failed"],
     ["Failed to fetch the converter core (503).", "load_failed"],

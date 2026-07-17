@@ -11,9 +11,29 @@ export type ProgressFn = (ratio: number) => void;
 export type LogFn = (line: string) => void;
 
 let loadPromise: Promise<FFmpeg> | null = null;
+// The live instance behind loadPromise, so cancelConversion can terminate it.
+let current: FFmpeg | null = null;
 // ffmpeg.wasm runs one command at a time on the shared instance; this guards
 // against a second conversion starting while one is in flight.
 let busy = false;
+// Set by cancelConversion; convertCdgToMp4 checks it between stages, since a
+// cancel can land in the window where nothing is awaiting the worker yet.
+let cancelRequested = false;
+
+/**
+ * Hard-stop the in-flight conversion. The single-thread core blocks its
+ * worker's event loop while encoding, so no message can interrupt it; the only
+ * real kill is terminating the worker. That rejects every pending call with
+ * "called FFmpeg.terminate()" and discards the instance; the next conversion
+ * reloads the core (fast: it's in the service worker cache). No-op when idle.
+ */
+export function cancelConversion(): void {
+  if (!busy && !loadPromise) return;
+  cancelRequested = true;
+  loadPromise = null;
+  current?.terminate();
+  current = null;
+}
 
 // The wasm ships gzipped to fit the host's per-file limit. Some hosts serve a
 // .gz with `Content-Encoding: gzip` (the browser then decompresses transparently)
@@ -36,6 +56,7 @@ export function loadFFmpeg(): Promise<FFmpeg> {
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     const instance = new FFmpeg();
+    current = instance;
     const [coreURL, wasmURL] = await Promise.all([
       toBlobURL(CORE_JS_URL, "text/javascript"),
       loadWasmBlobURL(),
@@ -64,6 +85,7 @@ export async function convertCdgToMp4(
     throw new Error("A conversion is already in progress. Please wait for it to finish.");
   }
   busy = true;
+  cancelRequested = false;
 
   const size = opts.size ?? "1440x1080";
 
@@ -82,6 +104,13 @@ export async function convertCdgToMp4(
         : "Could not load the converter. Try again, or try a different browser.",
       { cause: err }
     );
+  }
+
+  // A cancel during load may resolve against a half-dead instance; bail out
+  // before handing it work.
+  if (cancelRequested) {
+    busy = false;
+    throw new Error("Conversion cancelled.");
   }
 
   const onProgress = ({ progress }: { progress: number }) => {

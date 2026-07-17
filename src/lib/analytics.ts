@@ -90,6 +90,16 @@ export const trackConversionFailed = (
   } & ConvFiles
 ) => track("conversion_failed", p);
 
+export const trackConversionCancelled = (
+  p: {
+    input_type: InputType;
+    resolution: string;
+    stage: string;
+    progress_pct: number;
+    duration_ms: number;
+  } & ConvFiles
+) => track("conversion_cancelled", p);
+
 /**
  * The name + truncated message of an error's underlying `cause`, for failure
  * events. User-facing messages are generic on purpose (see classifyError);
@@ -123,6 +133,9 @@ export function mbBucket(bytes: number): string {
 // Order matters: specific input/output cases are matched before the generic "zip" test,
 // since the "drop the right files" and "file is empty" messages also contain ".zip".
 export function classifyError(message: string): string {
+  // Cancels are normally routed to conversion_cancelled before this runs;
+  // the mapping is a safety net for any that slip into the failure path.
+  if (/cancelled|FFmpeg\.terminate/i.test(message)) return "cancelled";
   if (/already in progress/i.test(message)) return "busy";
   if (/load the converter|download the converter|converter core/i.test(message))
     return "load_failed";

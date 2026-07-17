@@ -8,7 +8,9 @@ import { Converter } from "./Converter";
 // needs to resolve so the pair-completion flow can reach the "done" state.
 vi.mock("@/lib/ffmpeg", () => ({
   convertCdgToMp4: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  cancelConversion: vi.fn(),
 }));
+import { convertCdgToMp4, cancelConversion } from "@/lib/ffmpeg";
 
 const file = (name: string) => new File([new Uint8Array([1])], name);
 
@@ -43,5 +45,30 @@ describe("Converter pair completion", () => {
     await userEvent.upload(fileInput(container), [file("notes.txt")], { applyAccept: false });
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/can't convert \.txt files/i);
+  });
+});
+
+describe("Converter cancel", () => {
+  it("cancels an in-flight conversion back to the idle dropzone, without an error", async () => {
+    let rejectConv!: (e: Error) => void;
+    vi.mocked(convertCdgToMp4).mockImplementationOnce(
+      () =>
+        new Promise((_, rej) => {
+          rejectConv = rej;
+        })
+    );
+    // Mirror the real cancelConversion: terminating rejects the pending call.
+    vi.mocked(cancelConversion).mockImplementationOnce(() =>
+      rejectConv(new Error("called FFmpeg.terminate()"))
+    );
+
+    const { container } = render(<Converter />);
+    await userEvent.upload(fileInput(container), [file("song.cdg"), file("song.mp3")]);
+    await userEvent.click(await screen.findByRole("button", { name: /cancel/i }));
+
+    expect(await screen.findByText(/drag a karaoke \.zip/i)).toBeInTheDocument();
+    expect(cancelConversion).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(container.querySelector("video")).not.toBeInTheDocument();
   });
 });
