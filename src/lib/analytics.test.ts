@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyError, mbBucket, fileName } from "./analytics";
+import { classifyError, errorDetail, mbBucket, fileName } from "./analytics";
 
 describe("classifyError", () => {
   // The real user-facing messages from zip.ts / ffmpeg.ts / Converter.tsx.
@@ -11,13 +11,35 @@ describe("classifyError", () => {
     ["No .cdg file found in the zip.", "bad_zip"],
     ["No .mp3 file found in the zip.", "bad_zip"],
     ["A conversion is already in progress. Please wait for it to finish.", "busy"],
-    ["Could not load the converter. Check your connection and try again.", "load_failed"],
+    ["Could not load the converter. Try again, or try a different browser.", "load_failed"],
+    ["Could not download the converter. Check your connection and try again.", "load_failed"],
     ["Failed to fetch the converter core (503).", "load_failed"],
     ["The converter failed (ffmpeg exit code 1).", "ffmpeg_error"],
     ["The converter produced an empty file.", "empty_output"],
     ["something nobody anticipated", "unknown"],
   ])("%s -> %s", (message, code) => {
     expect(classifyError(message)).toBe(code);
+  });
+});
+
+describe("errorDetail", () => {
+  it("extracts the name and message of an Error cause", () => {
+    const e = new Error("generic copy", { cause: new TypeError("Failed to fetch") });
+    expect(errorDetail(e)).toEqual({ error_name: "TypeError", error_message: "Failed to fetch" });
+  });
+  it("truncates long cause messages to 200 chars", () => {
+    const e = new Error("generic", { cause: new Error("x".repeat(500)) });
+    expect(errorDetail(e).error_message).toHaveLength(200);
+  });
+  it("stringifies a non-Error cause", () => {
+    expect(errorDetail(new Error("bad cause", { cause: "a string" }))).toEqual({
+      error_name: "NonError",
+      error_message: "a string",
+    });
+  });
+  it("returns an empty object when there is no cause", () => {
+    expect(errorDetail(new Error("no cause"))).toEqual({});
+    expect(errorDetail("not an error")).toEqual({});
   });
 });
 
