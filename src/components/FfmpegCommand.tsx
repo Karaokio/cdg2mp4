@@ -93,7 +93,7 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
           </dl>
         </details>
 
-        <div className="flex flex-col gap-[2px] text-xs">
+        <div className="mt-sm flex flex-col gap-[2px] text-xs">
           <p>
             Install{" "}
             <a
@@ -114,7 +114,7 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
               <code className="font-mono">winget install ffmpeg</code> on Windows
             </li>
           </ul>
-          <p>
+          <p className="mt-sm">
             Converting a .zip? Extract it first to get the separate{" "}
             <code className="font-mono">.cdg</code> and <code className="font-mono">.mp3</code>{" "}
             files the command needs.
