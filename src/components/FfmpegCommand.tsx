@@ -76,6 +76,7 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
         </div>
 
         <details
+          className="pl-md"
           onToggle={(e) => {
             if ((e.target as HTMLDetailsElement).open) track("command_explain_opened");
           }}
@@ -106,12 +107,14 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
             </a>{" "}
             first to run the command:
           </p>
-          <p>
-            <code className="font-mono">brew install ffmpeg</code> on Mac
-          </p>
-          <p>
-            <code className="font-mono">winget install ffmpeg</code> on Windows
-          </p>
+          <ul className="flex list-disc flex-col gap-[2px] pl-xl">
+            <li>
+              <code className="font-mono">brew install ffmpeg</code> on Mac
+            </li>
+            <li>
+              <code className="font-mono">winget install ffmpeg</code> on Windows
+            </li>
+          </ul>
           <p>Converting a .zip? Extract it first.</p>
         </div>
       </div>
