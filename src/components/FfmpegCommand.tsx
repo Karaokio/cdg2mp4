@@ -76,7 +76,6 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
         </div>
 
         <details
-          className="pl-md"
           onToggle={(e) => {
             if ((e.target as HTMLDetailsElement).open) track("command_explain_opened");
           }}
