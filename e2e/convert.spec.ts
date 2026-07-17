@@ -32,6 +32,17 @@ test("completes a pair dropped one file at a time", async ({ page }) => {
   await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
 });
 
+test("cancels an in-flight conversion and recovers", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('input[type="file"]').setInputFiles(sampleZip);
+  await page.getByRole("button", { name: /cancel/i }).click();
+  await expect(page.getByText(/drag a karaoke \.zip/i)).toBeVisible();
+
+  // The terminated worker must not poison the next run: convert again fully.
+  await page.locator('input[type="file"]').setInputFiles(sampleZip);
+  await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
+});
+
 test("works offline after the first conversion", async ({ page, context }) => {
   await page.goto("/");
   await page.evaluate(() => navigator.serviceWorker.ready);

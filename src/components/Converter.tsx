@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { convertCdgToMp4 } from "@/lib/ffmpeg";
+import { convertCdgToMp4, cancelConversion } from "@/lib/ffmpeg";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
@@ -11,6 +11,7 @@ import {
   trackConversionStarted,
   trackConversionSucceeded,
   trackConversionFailed,
+  trackConversionCancelled,
   track,
   mbBucket,
   classifyError,
@@ -68,6 +69,8 @@ export function Converter() {
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
+  const cancelled = React.useRef(false); // user hit Cancel during this run
+  const progressNow = React.useRef(0); // latest progress, for the cancel event
 
   // Revoke the object URL when it's replaced or the component unmounts.
   React.useEffect(() => {
@@ -84,6 +87,8 @@ export function Converter() {
       setProgress(0);
       setEta(0);
       startedAt.current = null;
+      cancelled.current = false;
+      progressNow.current = 0;
       setStatus("working");
       setHeld(null); // consumed by this conversion, or superseded by a zip
 
@@ -113,6 +118,7 @@ export function Converter() {
           size: resolutionToSize(resolution),
           onProgress: (r) => {
             stage = "convert";
+            progressNow.current = r;
             setProgress(r);
             setPhase("Converting…");
             // Estimate remaining time from the measured encode rate.
@@ -136,6 +142,20 @@ export function Converter() {
           output_name: outputName,
         });
       } catch (e) {
+        if (cancelled.current) {
+          // User-requested stop, not a failure: back to the empty dropzone.
+          setStatus("idle");
+          setPhase("");
+          trackConversionCancelled({
+            input_type: inputType,
+            resolution,
+            stage,
+            progress_pct: Math.round(progressNow.current * 100),
+            duration_ms: Date.now() - t0,
+            ...inputNames,
+          });
+          return;
+        }
         const message = e instanceof Error ? e.message : String(e);
         setError(message);
         setStatus("error");
@@ -254,6 +274,18 @@ export function Converter() {
               ) : (
                 <p className="text-sm text-text-muted">Hang tight, this can take a moment.</p>
               )}
+              <Button
+                variant="secondary"
+                type="button"
+                className="mt-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cancelled.current = true;
+                  cancelConversion();
+                }}
+              >
+                Cancel
+              </Button>
             </>
           ) : held ? (
             <>
