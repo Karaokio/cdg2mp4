@@ -71,12 +71,19 @@ VITE_POSTHOG_HOST=https://us.i.posthog.com
 
 **You create:** account at tally.so, one form named **"cdg2mp4 feedback"**.
 
-**Visible fields (keep it short, 3 is plenty):**
+**Visible fields (keep it short):**
 
 1. *What are you using cdg2mp4 for?* (single-select: Personal karaoke / Hosting karaoke nights /
    Making content / Other) plus an optional "tell us more" text.
 2. *Anything broken, confusing, or missing?* (long text) -> captures bugs **and** feature requests.
-3. *Email, if you would like updates or a reply* (optional) -> this is the newsletter capture.
+3. *Attach the file that didn't work* (optional file upload: .zip, .cdg, .mp3, or the output
+   .mp4; free-plan limit is 10 MB per file). Added 2026-07-21 via the Tally API.
+4. *Email, if you would like updates or a reply* (optional) -> this is the newsletter capture.
+5. Closing text: "Prefer not to fill out the form? Email us directly at `support@karaokio.com`."
+
+Form edits are made via the Tally API (`PATCH https://api.tally.so/forms/<id>`) using
+`TALLY_API_KEY` from the local `.env` (gitignored, never deployed; the key is internal-only,
+unlike the public `VITE_*` vars).
 
 **Hidden fields (pre-filled from the app via URL params):** `build`, `trigger`
 (`footer` | `after_success` | `after_failure`), `resolution`, `input_type`, `result`. A bug
