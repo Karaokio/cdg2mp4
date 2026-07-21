@@ -12,13 +12,13 @@ const EXPLAIN: [flag: string, what: string][] = [
   ["-i song.mp3", "the audio input"],
   ["-r 30", "output frame rate: 30 frames per second"],
   [
-    "-vf scale=…:flags=neighbor",
-    "upscale the low-res CDG picture with nearest-neighbor, keeping the pixel art crisp instead of blurry; the size follows the quality picker above",
+    "-vf scale=…:flags=neighbor,tpad=…",
+    "upscale the low-res CDG picture with nearest-neighbor, keeping the pixel art crisp instead of blurry (the size follows the quality picker above), and hold the last frame if the graphics end before the audio",
   ],
   ["-c:v libx264", "encode the video as H.264, playable everywhere"],
   ["-pix_fmt yuv420p", "the pixel format Safari and QuickTime require"],
   ["-c:a aac -b:a 192k", "re-encode the audio to AAC at 192 kbps"],
-  ["-shortest", "stop when the shorter of the two inputs ends"],
+  ["-shortest", "end the file when the audio ends (the padded video never runs out first)"],
   ["song.mp4", "the output file"],
 ];
 
@@ -35,7 +35,7 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
   const cdg = names?.cdg ?? "song.cdg";
   const mp3 = names?.mp3 ?? "song.mp3";
   const out = cdg.replace(/\.cdg$/i, ".mp4");
-  const cmd = `ffmpeg -i "${cdg}" -i "${mp3}" -r 30 -vf "scale=${size}:flags=neighbor" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest "${out}"`;
+  const cmd = `ffmpeg -i "${cdg}" -i "${mp3}" -r 30 -vf "scale=${size}:flags=neighbor,tpad=stop_mode=clone:stop=-1" -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest "${out}"`;
 
   const copy = async () => {
     try {

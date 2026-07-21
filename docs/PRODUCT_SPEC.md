@@ -48,12 +48,15 @@ Update this table when these dependencies change, especially `@ffmpeg/core` (see
   SIMD (`x264: using cpu capabilities: none`), so encoding is CPU-bound and not instant.
 - **Command** (`src/lib/ffmpeg.ts`):
   ```
-  -i in.cdg -i in.mp3 -r 30 -vf scale=<W>:<H>:flags=neighbor \
+  -i in.cdg -i in.mp3 -r 30 -vf scale=<W>:<H>:flags=neighbor,tpad=stop_mode=clone:stop=-1 \
     -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -shortest out.mp4
   ```
   - `-pix_fmt yuv420p` is required for Safari/QuickTime/browser playback.
   - `flags=neighbor` keeps the low-res CDG pixel-art crisp when upscaled.
-  - `-shortest` ends at the shorter of the two inputs.
+  - `tpad=stop_mode=clone:stop=-1` clones the last frame indefinitely, so a `.cdg` that ends
+    before the `.mp3` (common in real rips) holds its last frame instead of cutting the song
+    short (#64). `-shortest` then ends the file exactly at the audio's end, which also trims
+    any silent tail when the `.cdg` is the longer input.
 - A shared FFmpeg instance is loaded once and reused; the virtual FS is cleaned between runs.
 
 ## 5. Features and behaviors
