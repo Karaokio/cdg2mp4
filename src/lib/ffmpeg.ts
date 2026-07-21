@@ -133,9 +133,13 @@ export async function convertCdgToMp4(
       "-r",
       "30",
       // Upscale the low-res CDG with nearest-neighbor to keep the pixel-art look
-      // crisp rather than blurry at higher resolutions.
+      // crisp rather than blurry at higher resolutions. tpad clones the last
+      // frame indefinitely so the video stream can never end before the audio:
+      // real rips often have a .cdg shorter than the .mp3, and without padding
+      // `-shortest` cuts the whole song there (#64). With it, `-shortest` always
+      // ends the file at the audio's end.
       "-vf",
-      `scale=${size.replace("x", ":")}:flags=neighbor`,
+      `scale=${size.replace("x", ":")}:flags=neighbor,tpad=stop_mode=clone:stop=-1`,
       "-c:v",
       "libx264",
       "-preset",

@@ -78,7 +78,7 @@ runtime required. Recommended: **Cloudflare Pages** (`build command: npm run bui
 1. Drop a karaoke `.zip` (or a matching `.cdg` + `.mp3`) onto the page.
 2. `src/lib/zip.ts` extracts the CDG (graphics) and MP3 (audio) streams.
 3. `src/lib/ffmpeg.ts` runs:
-   `ffmpeg -i in.cdg -i in.mp3 -r 30 -s 640x480 -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -shortest out.mp4`
+   `ffmpeg -i in.cdg -i in.mp3 -r 30 -vf "scale=1440:1080:flags=neighbor,tpad=stop_mode=clone:stop=-1" -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -shortest out.mp4`
 4. The MP4 is offered as an in-page preview and a download.
 
 ## Privacy
