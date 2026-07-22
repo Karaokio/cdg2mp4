@@ -55,13 +55,28 @@ VITE_POSTHOG_KEY=phc_xxx          # publishable project key
 VITE_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-**Event taxonomy** (no file names or contents ever sent):
+**Event taxonomy** (as shipped; file *names* are sent for diagnosability, file *contents*
+never are — see PRIVACY.md):
 
-- `conversion_started` { input_type: "zip" | "loose", resolution }
-- `conversion_succeeded` { resolution, duration_ms, song_seconds, output_mb_bucket }
-- `conversion_failed` { stage, error_code }
-- `saved_for_offline`, `offline_removed`, `pwa_installed`, `update_applied`, `download_clicked`
-- Tag every event with the build commit (reuse `BUILD_COMMIT` from `src/lib/buildInfo.ts`).
+- `conversion_started` { input_type: "zip" | "pair", resolution } + input file names
+  (`zip_name`, or `cdg_name` + `mp3_name`)
+- `conversion_succeeded` { input_type, resolution, duration_ms, song_seconds,
+  output_mb_bucket, output_name } + input file names. `song_seconds` is derived from the
+  CDG stream length (300 packets/sec x 24 bytes = 7200 bytes/sec), so it measures the
+  graphics duration, not the usually slightly longer MP3.
+- `conversion_failed` { input_type, resolution, stage, reason, error_name?,
+  error_message?, zip_extensions? } + input file names. `reason` is the low-cardinality
+  code from `classifyError` (e.g. `load_failed`, `ffmpeg_error`, `bad_input`).
+- `conversion_cancelled` { input_type, resolution, stage, progress_pct, duration_ms }
+- `saved_for_offline`, `offline_removed`, `pwa_installed`, `update_applied`,
+  `download_clicked` { resolution }
+- UI events: `theme_toggled` { theme }, `email_clicked` { trigger },
+  `feedback_opened` / `feedback_submitted` { trigger },
+  `command_disclosure_opened` { resolution }, `command_copied` { resolution, real_names },
+  `command_explain_opened`, `lone_file_held` { file_kind, file_name },
+  `lone_file_cleared` { file_kind }, `input_rejected` { extensions }
+- Every event carries the super properties `app`, `build` (the build commit from
+  `src/lib/buildInfo.ts`), and `theme`.
 
 **CSP:** add to `connect-src` in `public/_headers`:
 `https://us.i.posthog.com https://us-assets.i.posthog.com`. Install via npm and bundle, so
@@ -94,10 +109,11 @@ ten vague ones.
 Google Sheets) in the Karaokio Workspace. No email sender needed yet; when you want to send a
 newsletter later, export or pipe the email column into Resend or Buttondown.
 
-**Integration shape:** start with a **link-out** to the hosted form
-(`https://tally.so/r/<id>?build=...&trigger=...`) opened in a new tab. Zero added JS, no CSP
-change. If response rates feel low, upgrade to the Tally **popup** (needs
-`script-src https://tally.so` and `connect-src https://tally.so` in the CSP).
+**Integration shape (shipped):** the Tally **popup** modal. `embed.js` loads lazily on
+intent (hover/focus of a feedback entry point), and every entry point keeps the hosted form
+URL (`https://tally.so/r/<id>?build=...&trigger=...`) as a real-link fallback so a click
+still works if the widget hasn't loaded. The CSP carries the required
+`script-src` / `connect-src` / `frame-src https://tally.so` entries.
 
 **Env var:**
 
@@ -110,8 +126,8 @@ VITE_TALLY_FORM_URL=https://tally.so/r/xxxx
 - A small persistent "Feedback" link in the footer.
 - A gentle, dismissible prompt after a **successful** conversion ("Worked? What are you using
   this for?") and after a **failed** one ("That did not work. Tell us what you tried?").
-- Show once per session, remember dismissal in `localStorage`, never nag (same pattern as the
-  dev offline hint).
+- Show once per visit; dismissal (or a submit) is remembered in-memory only, so a reload
+  starts fresh. Never nag; the footer link stays available either way.
 
 ## Sentry (deferred)
 

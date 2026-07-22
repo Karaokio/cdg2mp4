@@ -4,7 +4,7 @@ Living spec for the converter. It captures what the app is, how each feature is 
 behave, and a list of testable behaviors so we can write exhaustive tests and judge app
 health. Keep this in sync with the code; the code is the source of truth when they disagree.
 
-_Last reviewed: 2026-06-27._
+_Last reviewed: 2026-07-22._
 
 ## 1. What it is
 
@@ -158,8 +158,6 @@ Each feature lists acceptance criteria written as testable statements. `[unit]`,
 - Encoding is CPU-bound (no SIMD in the wasm core); very long songs at 1080p take a while.
 - The browser may evict the cached core under storage pressure; it re-downloads when online.
 - iOS has no one-tap install; only a manual hint.
-- The README "How it works" snippet still shows the old `-s 640x480` command; the real
-  command is the `scale=...:flags=neighbor` form above. Fix when convenient.
 
 ## 9. Test plan (coverage targets)
 
