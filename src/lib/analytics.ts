@@ -73,6 +73,7 @@ export const trackConversionSucceeded = (
     input_type: InputType;
     resolution: string;
     duration_ms: number;
+    song_seconds: number;
     output_mb_bucket: string;
   } & ConvFiles
 ) => track("conversion_succeeded", p);
@@ -118,6 +119,16 @@ export function errorDetail(e: unknown): { error_name?: string; error_message?: 
 export function fileName(baseName: string | undefined): string | undefined {
   const name = baseName?.trim();
   return name ? name.slice(0, 120) : undefined;
+}
+
+/**
+ * Song length in whole seconds, derived from the CDG stream: CDG plays at 300
+ * packets/sec x 24 bytes = 7200 bytes/sec. Measures the graphics duration; the
+ * output video runs to the (usually slightly longer) MP3 length, but this is
+ * close enough to characterize song length without decoding audio.
+ */
+export function cdgSongSeconds(cdgBytes: number): number {
+  return Math.round(cdgBytes / 7200);
 }
 
 /** Coarse size buckets so an exact (potentially identifying) file size is never stored. */

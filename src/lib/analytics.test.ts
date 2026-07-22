@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyError, errorDetail, mbBucket, fileName } from "./analytics";
+import { cdgSongSeconds, classifyError, errorDetail, mbBucket, fileName } from "./analytics";
 
 describe("classifyError", () => {
   // The real user-facing messages from zip.ts / ffmpeg.ts / Converter.tsx.
@@ -58,6 +58,17 @@ describe("mbBucket", () => {
     [80 * 1048576, "50+"],
   ])("%i bytes -> %s", (bytes, bucket) => {
     expect(mbBucket(bytes)).toBe(bucket);
+  });
+});
+
+describe("cdgSongSeconds", () => {
+  it.each([
+    [0, 0],
+    [7200, 1], // 300 packets/sec x 24 bytes = 7200 bytes/sec
+    [7200 * 180, 180], // a typical ~3-minute track
+    [10800, 2], // rounds to the nearest second
+  ])("%i bytes -> %i s", (bytes, seconds) => {
+    expect(cdgSongSeconds(bytes)).toBe(seconds);
   });
 });
 
