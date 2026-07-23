@@ -115,6 +115,9 @@ export function Converter() {
             ? extractPairFromZip(await read(input.zip))
             : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
+        // Measure now: convertCdgToMp4 transfers pair.cdg's buffer to the ffmpeg
+        // worker, detaching it, so byteLength reads 0 after the conversion.
+        const songSeconds = cdgSongSeconds(pair.cdg.byteLength);
         setLastNames(
           input.type === "zip"
             ? { cdg: `${pair.baseName}.cdg`, mp3: `${pair.baseName}.mp3` }
@@ -146,7 +149,7 @@ export function Converter() {
           input_type: inputType,
           resolution,
           duration_ms: Date.now() - t0,
-          song_seconds: cdgSongSeconds(pair.cdg.byteLength),
+          song_seconds: songSeconds,
           output_mb_bucket: mbBucket(blob.size),
           ...inputNames,
           output_name: outputName,
