@@ -35,6 +35,20 @@ export function cancelConversion(): void {
   current = null;
 }
 
+/**
+ * Discard the idle instance so the next conversion starts on a fresh worker.
+ * Wasm memory only grows; after a long batch segment the heap sits at its
+ * high-water mark (hundreds of MB post-1080p-encode). The batch runner calls
+ * this every few items to reset it. Reload is cheap (~1-2s from the SW cache).
+ * No-op while a conversion is in flight — never yank a working encoder.
+ */
+export function recycleFFmpeg(): void {
+  if (busy) return;
+  loadPromise = null;
+  current?.terminate();
+  current = null;
+}
+
 // The wasm ships gzipped to fit the host's per-file limit. Some hosts serve a
 // .gz with `Content-Encoding: gzip` (the browser then decompresses transparently)
 // and some serve it as raw gzip bytes — so detect which we got via the magic
