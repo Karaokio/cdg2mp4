@@ -64,8 +64,16 @@ type ConvFiles = {
   output_name?: string;
 };
 
+// Batch correlation, absent on single conversions so existing funnels are
+// untouched. batch_id groups one queue drain; batch_index orders within it.
+type BatchProps = {
+  batch_id?: string;
+  batch_index?: number;
+  batch_size?: number;
+};
+
 export const trackConversionStarted = (
-  p: { input_type: InputType; resolution: string } & ConvFiles
+  p: { input_type: InputType; resolution: string } & ConvFiles & BatchProps
 ) => track("conversion_started", p);
 
 export const trackConversionSucceeded = (
@@ -75,8 +83,36 @@ export const trackConversionSucceeded = (
     duration_ms: number;
     song_seconds: number;
     output_mb_bucket: string;
-  } & ConvFiles
+  } & ConvFiles &
+    BatchProps
 ) => track("conversion_succeeded", p);
+
+export const trackBatchStarted = (p: {
+  batch_id: string;
+  item_count: number;
+  zip_count: number;
+  pair_count: number;
+  leftover_count: number;
+  duplicate_count: number;
+  resolution: string;
+}) => track("batch_started", p);
+
+export const trackBatchCompleted = (p: {
+  batch_id: string;
+  item_count: number;
+  done_count: number;
+  failed_count: number;
+  cancelled_count: number;
+  skipped_count: number;
+  duration_ms: number;
+  save_target: "download" | "directory";
+}) => track("batch_completed", p);
+
+export const trackBatchCancelled = (p: {
+  batch_id: string;
+  done_count: number;
+  remaining_count: number;
+}) => track("batch_cancelled", p);
 
 export const trackConversionFailed = (
   p: {
@@ -88,7 +124,8 @@ export const trackConversionFailed = (
     error_message?: string;
     /** Extensions found inside a rejected zip (comma-joined), e.g. "mp4,txt". */
     zip_extensions?: string;
-  } & ConvFiles
+  } & ConvFiles &
+    BatchProps
 ) => track("conversion_failed", p);
 
 export const trackConversionCancelled = (
@@ -98,7 +135,8 @@ export const trackConversionCancelled = (
     stage: string;
     progress_pct: number;
     duration_ms: number;
-  } & ConvFiles
+  } & ConvFiles &
+    BatchProps
 ) => track("conversion_cancelled", p);
 
 /**

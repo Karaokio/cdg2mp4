@@ -1,238 +1,158 @@
 import * as React from "react";
 import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { convertCdgToMp4, cancelConversion } from "@/lib/ffmpeg";
-import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
-import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
-import { selectInput, type Held } from "@/lib/inputFiles";
-import { setConverting } from "@/lib/converting";
+import { formatLeft, type ResKey } from "@/lib/format";
+import { type Held } from "@/lib/inputFiles";
+import { getState, subscribe, enqueueFiles, cancelItem, resetQueue } from "@/lib/batchRunner";
+import { counts, type QueueState } from "@/lib/queue";
 import { FeedbackPrompt } from "@/components/Feedback";
 import { FfmpegCommand, type CommandNames } from "@/components/FfmpegCommand";
-import {
-  trackConversionStarted,
-  trackConversionSucceeded,
-  trackConversionFailed,
-  trackConversionCancelled,
-  track,
-  mbBucket,
-  cdgSongSeconds,
-  classifyError,
-  errorDetail,
-  fileName,
-  type InputType,
-} from "@/lib/analytics";
-
-type Status = "idle" | "working" | "done" | "error";
-
-const read = async (f: File) => new Uint8Array(await f.arrayBuffer());
-
-/** A complete conversion input: a zip, or a cdg+mp3 pair (possibly completed
- * from a file held back from an earlier lone drop, see selectInput). */
-type RunInput = { type: "zip"; zip: File } | { type: "pair"; cdg: File; mp3: File };
+import { ResolutionPicker } from "@/components/ResolutionPicker";
+import { ResultPanel } from "@/components/ResultPanel";
+import { QueueList } from "@/components/QueueList";
+import { track, fileName, type InputType } from "@/lib/analytics";
 
 const partnerExt = (kind: "cdg" | "mp3") => (kind === "cdg" ? ".mp3" : ".cdg");
 
-function ResolutionPicker({ value, onChange }: { value: ResKey; onChange: (r: ResKey) => void }) {
-  return (
-    <div className="flex items-center justify-center gap-md">
-      <Label tone="muted">Quality</Label>
-      <div className="inline-flex rounded-pill border border-border bg-surface p-[3px] shadow-subtle">
-        {(Object.keys(RESOLUTIONS) as ResKey[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            aria-pressed={value === k}
-            onClick={() => onChange(k)}
-            className={cn(
-              "rounded-pill px-md py-[6px] font-marquee text-caption font-bold uppercase tracking-label",
-              "transition-colors duration-[80ms] ease-standard",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]",
-              value === k ? "bg-brand-wash text-brand" : "text-text-muted hover:text-text"
-            )}
-          >
-            {k}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+const STAGE_COPY = {
+  read: "Reading files…",
+  load: "Loading converter…",
+  convert: "Converting…",
+} as const;
+
+/** Keep the screen awake and warn before unload while a batch is active. */
+function useBatchGuards(active: boolean) {
+  React.useEffect(() => {
+    if (!active) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Screen Wake Lock is best-effort: auto-released on tab hide, re-acquired
+    // on return. Browsers without it just get the beforeunload guard.
+    let lock: { release: () => Promise<void> } | null = null;
+    let disposed = false;
+    const acquire = async () => {
+      try {
+        lock = (await navigator.wakeLock?.request("screen")) ?? null;
+        if (disposed) void lock?.release();
+      } catch {
+        lock = null; // denied (low battery, hidden tab) — fine
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void acquire();
+    };
+    void acquire();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onVisible);
+      void lock?.release().catch(() => {});
+    };
+  }, [active]);
 }
 
 export function Converter() {
-  const [status, setStatus] = React.useState<Status>("idle");
+  const queue: QueueState = React.useSyncExternalStore(subscribe, getState);
   const [resolution, setResolution] = React.useState<ResKey>("1080p");
-  const [progress, setProgress] = React.useState(0);
-  const [phase, setPhase] = React.useState("");
-  const [eta, setEta] = React.useState(0);
-  const [error, setError] = React.useState("");
-  const [result, setResult] = React.useState<{ url: string; name: string } | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const [held, setHeld] = React.useState<Held<File> | null>(null);
-  const [lastInput, setLastInput] = React.useState<InputType | undefined>();
-  // Real filenames for the "run it locally" command, once a conversion knows them.
-  const [lastNames, setLastNames] = React.useState<CommandNames | undefined>();
+  const [inputError, setInputError] = React.useState("");
+  const [notice, setNotice] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const startedAt = React.useRef<number | null>(null);
-  const cancelled = React.useRef(false); // user hit Cancel during this run
-  const progressNow = React.useRef(0); // latest progress, for the cancel event
 
-  // Revoke the object URL when it's replaced or the component unmounts.
-  React.useEffect(() => {
-    return () => {
-      if (result) URL.revokeObjectURL(result.url);
-    };
-  }, [result]);
+  const c = counts(queue);
+  const inFlight = c.queued + c.converting;
+  const single = queue.mode === "single";
+  const item = single ? queue.items[0] : undefined; // the single-mode item, if any
+  useBatchGuards(inFlight > 0);
 
-  const run = React.useCallback(
-    async (input: RunInput) => {
-      if (result) URL.revokeObjectURL(result.url);
-      setResult(null);
-      setError("");
-      setProgress(0);
-      setEta(0);
-      startedAt.current = null;
-      cancelled.current = false;
-      progressNow.current = 0;
-      setStatus("working");
-      setHeld(null); // consumed by this conversion, or superseded by a zip
-
-      const inputType: InputType = input.type;
-      // The input filenames, captured up front (contents never leave the device).
-      const inputNames =
-        input.type === "zip"
-          ? { zip_name: fileName(input.zip.name) }
-          : { cdg_name: fileName(input.cdg.name), mp3_name: fileName(input.mp3.name) };
-      const t0 = Date.now();
-      let stage = "read";
-      let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
-      setLastInput(inputType);
-      setConverting(true); // hold off any service-worker auto-update reload until done
-      trackConversionStarted({ input_type: inputType, resolution, ...inputNames });
-      try {
-        setPhase("Reading files…");
-        const pair =
-          input.type === "zip"
-            ? extractPairFromZip(await read(input.zip))
-            : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
-        outputName = fileName(`${pair.baseName}.mp4`);
-        // Measure now: convertCdgToMp4 transfers pair.cdg's buffer to the ffmpeg
-        // worker, detaching it, so byteLength reads 0 after the conversion.
-        const songSeconds = cdgSongSeconds(pair.cdg.byteLength);
-        setLastNames(
-          input.type === "zip"
-            ? { cdg: `${pair.baseName}.cdg`, mp3: `${pair.baseName}.mp3` }
-            : { cdg: input.cdg.name, mp3: input.mp3.name }
-        );
-
-        stage = "load";
-        setPhase("Loading converter…");
-        const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
-          size: resolutionToSize(resolution),
-          onProgress: (r) => {
-            stage = "convert";
-            progressNow.current = r;
-            setProgress(r);
-            setPhase("Converting…");
-            // Estimate remaining time from the measured encode rate.
-            if (startedAt.current == null) startedAt.current = Date.now();
-            const elapsed = (Date.now() - startedAt.current) / 1000;
-            if (r > 0.03 && elapsed > 1.5) setEta((elapsed * (1 - r)) / r);
-          },
-        });
-
-        const blob = new Blob([mp4 as BlobPart], { type: "video/mp4" });
-        const url = URL.createObjectURL(blob);
-        setResult({ url, name: `${pair.baseName}.mp4` });
-        setProgress(1);
-        setStatus("done");
-        trackConversionSucceeded({
-          input_type: inputType,
-          resolution,
-          duration_ms: Date.now() - t0,
-          song_seconds: songSeconds,
-          output_mb_bucket: mbBucket(blob.size),
-          ...inputNames,
-          output_name: outputName,
-        });
-      } catch (e) {
-        if (cancelled.current) {
-          // User-requested stop, not a failure: back to the empty dropzone.
-          setStatus("idle");
-          setPhase("");
-          trackConversionCancelled({
-            input_type: inputType,
-            resolution,
-            stage,
-            progress_pct: Math.round(progressNow.current * 100),
-            duration_ms: Date.now() - t0,
-            ...inputNames,
-          });
-          return;
-        }
-        const message = e instanceof Error ? e.message : String(e);
-        setError(message);
-        setStatus("error");
-        trackConversionFailed({
-          input_type: inputType,
-          resolution,
-          stage,
-          reason: classifyError(message),
-          ...errorDetail(e),
-          zip_extensions: e instanceof ZipPairError ? e.extensions?.join(",") : undefined,
-          ...inputNames,
-          output_name: outputName,
-        });
-      } finally {
-        setConverting(false); // idle again; a pending update may now auto-apply
-      }
-    },
-    [result, resolution]
-  );
-
-  // Route dropped/selected files: start a conversion when the input is
-  // complete, hold a lone .cdg/.mp3 and ask for its partner, reject the rest.
+  // Route dropped/selected files. The classifier handles any drop size; the
+  // component only surfaces what didn't enqueue (hold / notice / error).
   const onFiles = React.useCallback(
     (files: File[]) => {
-      const sel = selectInput(files, held);
-      if (sel.type === "hold") {
-        setHeld({ kind: sel.kind, file: sel.file });
-        setError("");
-        setStatus("idle");
-        track("lone_file_held", { file_kind: sel.kind, file_name: fileName(sel.file.name) });
+      setInputError("");
+      setNotice("");
+      const res = enqueueFiles(files, held, resolution);
+      if (res.items.length > 0) {
+        setHeld(null);
+        const parts: string[] = [];
+        if (res.leftovers.length > 0)
+          parts.push(
+            `${res.leftovers.length} file${res.leftovers.length > 1 ? "s" : ""} had no matching partner: ${res.leftovers
+              .map((l) => l.file.name)
+              .join(", ")}`
+          );
+        if (res.rejectedExtensions.length > 0) {
+          const exts = res.rejectedExtensions.filter((x) => x !== "none").map((x) => `.${x}`);
+          parts.push(`skipped ${exts.length ? exts.join(", ") : "some"} files that can't convert`);
+        }
+        if (parts.length) setNotice(parts.join(" · "));
         return;
       }
-      if (sel.type === "reject") {
-        const exts = sel.extensions.filter((x) => x !== "none").map((x) => `.${x}`);
-        setError(
-          `Can't convert ${exts.length ? `${exts.join(" / ")} files` : "those files"}. ` +
-            "Drop a karaoke .zip, or a matching .cdg and .mp3 together."
-        );
-        setStatus("error");
-        track("input_rejected", { extensions: sel.extensions.join(",") });
+      if (res.leftovers.length === 1 && res.rejectedExtensions.length === 0) {
+        const lone = res.leftovers[0];
+        setHeld(lone);
+        track("lone_file_held", { file_kind: lone.kind, file_name: fileName(lone.file.name) });
         return;
       }
-      void run(sel);
+      const exts = res.rejectedExtensions.filter((x) => x !== "none").map((x) => `.${x}`);
+      setInputError(
+        `Can't convert ${exts.length ? `${exts.join(" / ")} files` : "those files"}. ` +
+          "Drop a karaoke .zip, or a matching .cdg and .mp3 together."
+      );
+      track("input_rejected", { extensions: res.rejectedExtensions.join(",") });
     },
-    [held, run]
+    [held, resolution]
   );
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-selecting the same file
-    if (files.length && status !== "working") onFiles(files);
+    if (files.length) onFiles(files);
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    if (status === "working") return; // don't start a second conversion mid-run
     const files = Array.from(e.dataTransfer.files ?? []);
     if (files.length) onFiles(files);
   };
 
-  const working = status === "working";
+  // ---- Single-mode view state, derived from the store ----
+  const singleWorking =
+    item != null && (item.state.phase === "queued" || item.state.phase === "converting");
+  const singleDone = item?.state.phase === "done" && queue.preview != null;
+  const singleFailed = item?.state.phase === "failed" ? item.state.message : "";
+  const lastInput: InputType | undefined = item?.source.type;
+  const errorText = inputError || (single ? singleFailed : "");
+
+  // Filenames for the "run it locally" command (single mode only). Zips reveal
+  // their real names only after conversion, via the output stem.
+  const lastNames: CommandNames | undefined = React.useMemo(() => {
+    if (!item) {
+      if (held) return held.kind === "cdg" ? { cdg: held.file.name } : { mp3: held.file.name };
+      return undefined;
+    }
+    if (item.source.type === "pair")
+      return { cdg: item.source.cdg.name, mp3: item.source.mp3.name };
+    if (item.state.phase === "done") {
+      const stem = item.state.outputName.replace(/\.mp4$/, "");
+      return { cdg: `${stem}.cdg`, mp3: `${stem}.mp3` };
+    }
+    return undefined;
+  }, [item, held]);
+
+  const progress = item?.state.phase === "converting" ? item.state.progress : 0;
+  const eta = item?.state.phase === "converting" ? item.state.eta : 0;
+  const phase = item?.state.phase === "converting" ? STAGE_COPY[item.state.stage] : "";
   const pct = Math.round(progress * 100);
-  const showPicker = status === "idle" || status === "error";
+
+  const showDropzone = single ? !singleDone : true;
+  const showPicker = !singleWorking && inFlight === 0;
+  const compactDropzone = !single; // batch mode: slim "add more" bar
+  const batchDrained = !single && inFlight === 0 && c.total > 0;
 
   return (
     <Surface className="flex flex-col gap-lg">
@@ -240,8 +160,8 @@ export function Converter() {
 
       {showPicker && <ResolutionPicker value={resolution} onChange={setResolution} />}
 
-      {/* Dropzone */}
-      {status !== "done" && (
+      {/* Dropzone: full-size in single mode, slim add-bar in batch mode */}
+      {showDropzone && (
         // A drop region (not a button). The "Choose files" Button inside is the
         // keyboard-accessible trigger; its click bubbles here to open the picker.
         <div
@@ -251,19 +171,20 @@ export function Converter() {
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          onClick={() => !working && inputRef.current?.click()}
+          onClick={() => !singleWorking && inputRef.current?.click()}
           className={cn(
             "flex flex-col items-center justify-center gap-md rounded-lg border-2 border-dashed",
-            "px-xl py-3xl text-center transition-colors duration-[160ms] ease-standard",
-            working ? "cursor-default opacity-60" : "cursor-pointer",
+            "text-center transition-colors duration-[160ms] ease-standard",
+            compactDropzone ? "px-lg py-md" : "px-xl py-3xl",
+            singleWorking ? "cursor-default opacity-60" : "cursor-pointer",
             dragging ? "border-brand bg-brand-wash" : "border-border hover:border-brand"
           )}
         >
-          {working ? (
+          {singleWorking ? (
             <>
               <Spinner />
               <p className="font-body font-semibold text-base" aria-live="polite">
-                {phase}
+                {phase || "Starting…"}
               </p>
               {progress > 0 ? (
                 <div className="w-full max-w-[360px]">
@@ -293,8 +214,7 @@ export function Converter() {
                 className="mt-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  cancelled.current = true;
-                  cancelConversion();
+                  if (item) cancelItem(item.id);
                 }}
               >
                 Cancel
@@ -329,13 +249,17 @@ export function Converter() {
                 </Button>
               </div>
             </>
+          ) : compactDropzone ? (
+            <p className="text-base text-text-muted">
+              Drop more songs to add them to the queue, or click to choose.
+            </p>
           ) : (
             <>
               <Label>Drop it here</Label>
               <p className="font-display text-xl font-bold">Drag a karaoke .zip to convert</p>
               <p className="max-w-[42ch] text-base text-text-muted">
                 Or a matching <code className="font-mono">.cdg</code> and{" "}
-                <code className="font-mono">.mp3</code> together.
+                <code className="font-mono">.mp3</code> together — or a whole batch at once.
                 <br />
                 It all runs right here in your browser.
               </p>
@@ -347,8 +271,14 @@ export function Converter() {
         </div>
       )}
 
-      {/* Expectation note (idle only) */}
-      {status === "idle" && (
+      {notice && (
+        <p className="text-center text-sm text-text-muted" role="status">
+          {notice}
+        </p>
+      )}
+
+      {/* Expectation note (idle single only) */}
+      {single && !item && !held && !errorText && (
         <p className="text-center text-sm text-text-muted">
           A typical song takes about a minute, a little longer at 1080p.
           <br />
@@ -356,68 +286,55 @@ export function Converter() {
         </p>
       )}
 
-      {/* Result */}
-      {status === "done" && result && (
-        <div className="flex flex-col gap-lg">
-          <video
-            src={result.url}
-            controls
+      {/* Batch queue */}
+      {!single && <QueueList state={queue} />}
+
+      {/* Result: full panel in single mode; muted latest-preview in batch */}
+      {singleDone && queue.preview && (
+        <>
+          <ResultPanel
+            url={queue.preview.url}
+            name={queue.preview.name}
+            resolution={resolution}
             autoPlay
-            loop
-            aria-label={`Converted karaoke video: ${result.name}`}
-            className="w-full rounded-lg shadow-medium"
+            onConvertAnother={resetQueue}
           />
-          <div className="flex flex-wrap items-center justify-between gap-md">
-            <div>
-              <Label tone="muted">Ready</Label>
-              <p className="font-body font-semibold">{result.name}</p>
-            </div>
-            <div className="flex gap-sm">
-              <Button variant="secondary" type="button" onClick={() => setStatus("idle")}>
-                Convert another
-              </Button>
-              <Button asChild variant="primary">
-                <a
-                  href={result.url}
-                  download={result.name}
-                  onClick={() => track("download_clicked", { resolution })}
-                >
-                  Download MP4
-                </a>
-              </Button>
-            </div>
-          </div>
           <FeedbackPrompt result="success" resolution={resolution} input_type={lastInput} />
-        </div>
+        </>
+      )}
+      {!single && queue.preview && (
+        <ResultPanel
+          url={queue.preview.url}
+          name={queue.preview.name}
+          resolution={resolution}
+          autoPlay={false}
+        />
+      )}
+      {batchDrained && (
+        <FeedbackPrompt
+          result={c.done > 0 ? "success" : "failure"}
+          resolution={resolution}
+          input_type={lastInput}
+        />
       )}
 
-      {/* Error */}
-      {status === "error" && (
+      {/* Error (input errors any mode; conversion errors single mode only) */}
+      {errorText && (
         <div className="flex flex-col gap-md">
           <div
             role="alert"
             className="rounded-md border border-brand bg-brand-wash px-lg py-md text-base text-brand-strong"
           >
-            {error}
+            {errorText}
           </div>
-          <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
+          {single && singleFailed && (
+            <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
+          )}
         </div>
       )}
 
-      {/* Local-ffmpeg disclosure for advanced users (never during a conversion). */}
-      {(status === "idle" || status === "done") && (
-        <FfmpegCommand
-          resolution={resolution}
-          names={
-            lastNames ??
-            (held
-              ? held.kind === "cdg"
-                ? { cdg: held.file.name }
-                : { mp3: held.file.name }
-              : undefined)
-          }
-        />
-      )}
+      {/* Local-ffmpeg disclosure for advanced users (single mode, never mid-run). */}
+      {single && !singleWorking && <FfmpegCommand resolution={resolution} names={lastNames} />}
     </Surface>
   );
 }
