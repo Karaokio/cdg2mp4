@@ -170,3 +170,7 @@ coverage/
 playwright-report/
 test-results/
 .playwright/
+
+# Generated analytics page (rebuild with: npm run insights). Anchored so it
+# does not also match scripts/insights/.
+/insights/

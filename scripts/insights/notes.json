@@ -1,0 +1,35 @@
+{
+  "_convention": [
+    "Keep every string here DEFINITIONAL: what a number measures and how to read",
+    "it. No observations about a particular week ('three spikes carry the month'),",
+    "no named users, no incident write-ups. Those age badly and a rerun cannot",
+    "refresh them; put that kind of analysis in a blog post or issue instead.",
+    "",
+    "Anything that is really a derived statistic should be a {{token}} rather than",
+    "a typed-in number (see STAT_TOKENS in scripts/insights.mjs)."
+  ],
+
+  "title": "cdg2mp4 — usage",
+  "eyebrow": "Karaokio · cdg2mp4",
+  "headline": "Conversion analytics",
+  "lede": "Everything the converter records, covering {{rangeFromLong}} to {{rangeToLong}}. The tool runs entirely in the browser, so these are anonymous counts of events, not accounts. Each panel says what it measures and how to read it.",
+
+  "cumHeading": "Conversions, running total",
+  "cumNote": "Every completed conversion since tracking began. Read the slope, not the height: a near-vertical stretch is usually one person working through a disc collection rather than a jump in how many people are using the tool. Check it against the profiles chart before treating it as growth.",
+
+  "dailyNote": "Completed conversions per day. Because a single person can run dozens in a session, a tall bar is a usage-depth signal, not an audience signal. The busiest day here is {{topDay}}.",
+  "idsNote": "Browser profiles seen, accumulating. This is the closest thing to an audience curve: it moves when new people arrive, and stays flat while an existing user is mid-batch. The dashed line drops my own testing and traffic from cloud datacenter ranges.",
+
+  "caveatEyebrow": "Read this before quoting a user count",
+  "caveatHeading": "A profile is not a person",
+  "caveatNote": "PostHog identifies anonymous visitors with a per-browser ID kept in local storage, and this app never calls <code>identify</code>, so nothing is ever merged across devices. One ID means one browser profile that still has its storage. The same person counts twice across two browsers, across a laptop and a phone, or after clearing site data. Treat the total as an upper bound, and the “completed at least one conversion” row as the only one that reflects real use.",
+  "breakdownNote": "What the {{profiles}} profiles are actually made of. Only the first row used the tool for its purpose.",
+  "breakdownAfter": "Even the converted row overstates the number of humans: profiles created minutes apart in the same city, on the same operating system, are usually one person on two machines. A realistic headcount is somewhat below {{converted}}.",
+
+  "failHeading": "Where attempts go wrong",
+  "failNote": "Failed attempts per day, {{failed}} of {{started}} in total. A cluster from very few profiles usually means one machine cannot run the converter at all, which repeats on every visit; a spread across many profiles is more likely a real regression. The table names the causes.",
+  "failTableHeading": "Failure reasons",
+  "failTableNote": "Grouped by the reason code the app assigns and the stage it failed at. <code>bad_input</code> and the <code>zip_missing_*</code> codes are user-side (the wrong files were dropped). <code>load_failed</code> means the converter never started, which points at the browser or the network rather than the file.",
+
+  "footer": "Events are anonymous: no accounts, no file contents, no identities. Filenames and coarse IP geolocation are recorded; the conversion itself runs entirely in the browser and files are never uploaded. “Self” is my own testing; “datacenter” is bot and scanner traffic from cloud regions. Generated {{generatedOn}} by <code>npm run insights</code> from data through {{rangeToLong}}."
+}
