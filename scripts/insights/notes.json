@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "The interpretive prose on the insights page. Numbers on the page regenerate",
+    "from PostHog every run; these sentences do not. `writtenFor` records the data",
+    "range they were written against — when the data moves past it, the build",
+    "prints a warning naming this file. Re-read the copy and bump the range.",
+    "",
+    "Any {{token}} is substituted with a computed stat (see STAT_TOKENS in",
+    "scripts/insights.mjs), so prefer a token over typing a number by hand."
+  ],
+  "writtenFor": { "from": "2026-06-27", "to": "2026-07-30" },
+
+  "title": "cdg2mp4 — first month of data",
+  "eyebrow": "Karaokio · cdg2mp4",
+  "headline": "The first month of actually knowing",
+  "lede": "For seven years the only signal this tool produced was email when it broke. Analytics went live on {{rangeFromLong}}. Here is every number it has recorded since, including the ones that flatter the project less than the headline does.",
+
+  "cumHeading": "Conversions, running total",
+  "cumNote": "The curve is flat for most of the period and then turns almost vertical at the end. That is not a marketing win. It is a handful of people discovering they can feed the tool an entire disc collection.",
+
+  "dailyNote": "Three spikes carry the month: {{topDays}}. Each is one person working through a library.",
+  "idsNote": "Arrivals are steady and roughly linear, unlike conversions. New people keep showing up at about the same rate whether or not a power user is mid-binge.",
+
+  "caveatEyebrow": "The honest caveat",
+  "caveatHeading": "What “{{profiles}} users” actually counts",
+  "caveatNote": "PostHog identifies anonymous visitors with a per-browser ID kept in local storage, and this app never calls <code>identify</code>, so nothing is ever merged across devices. One ID means one browser profile that has not cleared its storage. It does not mean one person. Every ID is a UUIDv7, so the creation time can be decoded: the median gap between an ID being minted and its first event is half a second, confirming a fresh ID per new browser profile rather than per human.",
+  "breakdownNote": "Sorted by how much they tell you. Only the first row represents anyone who used the tool for its purpose.",
+  "breakdownAfter": "Even {{converted}} overstates it. Same-city, same-OS profiles created minutes apart show up repeatedly: the heaviest user in Florida appears as two profiles totalling 291 conversions, and Lima, Medellín and Tlaxcala each show a pair. A realistic count of humans who have completed a conversion is closer to 35 than to {{profiles}}.",
+
+  "failHeading": "Where attempts go wrong",
+  "failNote": "{{failed}} failures across {{started}} attempts. Most days are zero. The clusters are not random.",
+
+  "calloutBadge": "Open issue",
+  "calloutTitle": "One machine has never once succeeded",
+  "calloutBody": [
+    "Two browser profiles in the same Mexican city, created 32 minutes apart, have tried 18 times across four visits since July 4 and failed every time inside 3 seconds. Firefox names the cause: <code>v128 not enabled</code>, the WebAssembly SIMD type the ffmpeg core requires. Chrome 109 and Firefox 115 are the last versions available on Windows 7, 8 and 8.1, so upgrading is not available to them.",
+    "They retried, toggled offline storage, switched themes, and opened the feedback form twice. The app told them to “try again”, which will never work on that hardware. Filed as <a href=\"https://github.com/Karaokio/cdg2mp4/issues/75\">issue #75</a>: detect the missing capability up front and offer the command-line fallback instead."
+  ],
+
+  "footer": "Events are anonymous: no accounts, no file contents, no identities. Filenames and coarse IP geolocation are recorded; the conversion itself runs entirely in the browser. “Self” traffic is my own testing; “datacenter” is bot and scanner traffic from cloud regions. Generated {{generatedOn}} from data through {{rangeToLong}}."
+}

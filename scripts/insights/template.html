@@ -1,0 +1,400 @@
+<title>{{title}}</title>
+<style>
+/*FONTS*/
+
+:root{
+  --ko-red-500:#D92334; --ko-red-600:#B11026; --ko-red-700:#950A1F;
+  --bg:#FBF6F1; --sunken:#F1E9E1; --surface:#FFFFFF; --border:#ECE0D8;
+  --ink:#241A17; --muted:#6B5A50; --faint:#9A8A80;
+  --mark:#D92334; --mark-soft:rgba(217,35,52,.13); --mark-line:rgba(217,35,52,.30);
+  --ref:#6B5A50; --grid:rgba(36,26,23,.09);
+  --flag:#B26A00; --flag-wash:rgba(243,155,18,.13); --flag-line:#F39B12;
+  --shadow:0 1px 2px rgba(36,26,23,.05), 0 8px 24px -12px rgba(36,26,23,.16);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0E1116; --sunken:#090B0F; --surface:#171B22; --border:#313845;
+    --ink:#EEF1F5; --muted:#8D97A5; --faint:#6C7889;
+    --mark:#F2555F; --mark-soft:rgba(242,85,95,.16); --mark-line:rgba(242,85,95,.34);
+    --ref:#8D97A5; --grid:rgba(238,241,245,.10);
+    --flag:#FFC24B; --flag-wash:rgba(255,194,75,.12); --flag-line:#FFC24B;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1116; --sunken:#090B0F; --surface:#171B22; --border:#313845;
+  --ink:#EEF1F5; --muted:#8D97A5; --faint:#6C7889;
+  --mark:#F2555F; --mark-soft:rgba(242,85,95,.16); --mark-line:rgba(242,85,95,.34);
+  --ref:#8D97A5; --grid:rgba(238,241,245,.10);
+  --flag:#FFC24B; --flag-wash:rgba(255,194,75,.12); --flag-line:#FFC24B;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -14px rgba(0,0,0,.7);
+}
+:root[data-theme="light"]{
+  --bg:#FBF6F1; --sunken:#F1E9E1; --surface:#FFFFFF; --border:#ECE0D8;
+  --ink:#241A17; --muted:#6B5A50; --faint:#9A8A80;
+  --mark:#D92334; --mark-soft:rgba(217,35,52,.13); --mark-line:rgba(217,35,52,.30);
+  --ref:#6B5A50; --grid:rgba(36,26,23,.09);
+  --flag:#B26A00; --flag-wash:rgba(243,155,18,.13); --flag-line:#F39B12;
+  --shadow:0 1px 2px rgba(36,26,23,.05), 0 8px 24px -12px rgba(36,26,23,.16);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:clamp(28px,5vw,72px) clamp(16px,4vw,40px) 96px}
+
+.eyebrow{font-family:"Saira Semi Condensed",system-ui,sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--eyebrow)}
+h1{font-family:"Unbounded",system-ui,sans-serif;font-weight:700;
+  font-size:clamp(30px,4.6vw,50px);line-height:1.06;letter-spacing:-.02em;
+  margin:10px 0 0;text-wrap:balance}
+h2{font-family:"Unbounded",system-ui,sans-serif;font-weight:700;
+  font-size:clamp(19px,2.2vw,24px);line-height:1.2;letter-spacing:-.015em;margin:0;text-wrap:balance}
+h3{font-family:"Hanken Grotesk",system-ui,sans-serif;font-weight:700;font-size:15px;margin:0}
+p{margin:0}
+.lede{color:var(--muted);max-width:62ch;margin-top:14px;font-size:16px}
+.note{color:var(--muted);font-size:13.5px;max-width:70ch}
+.num{font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+header{border-bottom:1px solid var(--border);padding-bottom:28px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px;
+  font-family:"Geist Mono",ui-monospace,monospace;font-size:12px;color:var(--faint)}
+
+section{margin-top:clamp(40px,6vw,64px)}
+.sechead{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));margin-top:28px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px 16px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px}
+.tile .k{font-family:"Saira Semi Condensed",system-ui,sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.11em;font-size:10.5px;color:var(--muted)}
+.tile .v{font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;
+  font-size:29px;line-height:1.1;letter-spacing:-.02em}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.tile.flag{border-color:var(--flag-line);background:var(--flag-wash)}
+.tile.flag .v{color:var(--flag)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:20px 20px 14px;box-shadow:var(--shadow)}
+.card .ct{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:2px}
+.card .cs{color:var(--muted);font-size:13px;margin-bottom:12px;max-width:64ch}
+.grid2{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:860px){.grid2{grid-template-columns:1fr 1fr}}
+
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:14px;height:3px;border-radius:2px;background:var(--mark);flex:none}
+.sw.ref{background:none;border-top:2px dashed var(--ref);height:0}
+
+.tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;font-size:12.5px;box-shadow:var(--shadow);z-index:5;min-width:132px;
+  transform:translate(-50%,-100%)}
+.tip .td{font-family:"Saira Semi Condensed",system-ui,sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.09em;font-size:10px;color:var(--muted);margin-bottom:4px}
+.tip .tr{display:flex;justify-content:space-between;gap:14px}
+.tip .tv{font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.tip{transition:none}}
+
+.bd{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.bdrow{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(0,3fr) auto;gap:14px;align-items:center}
+.bdbar{height:22px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.bdbar i{display:block;height:100%;background:var(--mark);border-radius:0 3px 3px 0}
+.bdbar i.mut{background:var(--ref);opacity:.42}
+.bdlab{font-size:13.5px}
+.bdlab b{display:block;font-weight:700}
+.bdlab em{font-style:normal;color:var(--muted);font-size:12.5px}
+.bdval{font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:14px;text-align:right}
+@media(max-width:640px){.bdrow{grid-template-columns:1fr auto;}.bdbar{grid-column:1/-1}}
+
+.callout{background:var(--flag-wash);border:1px solid var(--flag-line);border-radius:12px;padding:20px}
+.callout .ch{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.callout .badge{font-family:"Saira Semi Condensed",system-ui,sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;font-size:10.5px;color:var(--flag);
+  border:1px solid var(--flag-line);border-radius:99px;padding:2px 8px}
+code{font-family:"Geist Mono",ui-monospace,monospace;font-size:12.5px;
+  background:var(--sunken);border-radius:4px;padding:1px 5px}
+a{color:var(--mark);text-underline-offset:2px}
+a:focus-visible,details:focus-visible,summary:focus-visible{outline:2px solid var(--mark);outline-offset:2px;border-radius:3px}
+
+details{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px}
+summary{cursor:pointer;font-weight:700;font-size:14px}
+.tbwrap{overflow-x:auto;margin-top:14px}
+table{border-collapse:collapse;width:100%;font-size:13px;
+  font-family:"Geist Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)}
+th:first-child,td:first-child{text-align:left}
+th{font-family:"Saira Semi Condensed",system-ui,sans-serif;text-transform:uppercase;
+  letter-spacing:.09em;font-size:10.5px;color:var(--muted);position:sticky;top:0;background:var(--surface)}
+
+footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--border);color:var(--faint);font-size:12.5px}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">{{eyebrow}}</p>
+  <h1>{{headline}}</h1>
+  <p class="lede">{{lede}}</p>
+  <div class="meta">
+    <span>{{rangeFromLong}} – {{rangeToLong}}</span><span>{{days}} days</span><span>Source: PostHog</span><span>Anonymous events, no accounts</span>
+  </div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><span class="k">Conversions completed</span><span class="v" id="t-ok"></span><span class="s" id="t-ok-s"></span></div>
+  <div class="tile"><span class="k">Attempts</span><span class="v" id="t-try"></span><span class="s" id="t-try-s"></span></div>
+  <div class="tile"><span class="k">Videos downloaded</span><span class="v" id="t-dl"></span><span class="s" id="t-dl-s"></span></div>
+  <div class="tile"><span class="k">Browser profiles</span><span class="v" id="t-id"></span><span class="s">not the same as people, see below</span></div>
+  <div class="tile"><span class="k">Installed as an app</span><span class="v" id="t-pwa"></span><span class="s">offline installs</span></div>
+</div>
+
+<section>
+  <div class="sechead">
+    <h2>{{cumHeading}}</h2>
+    <p class="note">{{cumNote}}</p>
+  </div>
+  <div class="card">
+    <div class="ct"><h3>Cumulative completed conversions</h3></div>
+    <div class="chart" id="c-cum"></div>
+  </div>
+</section>
+
+<section>
+  <div class="grid2">
+    <div class="card">
+      <div class="ct"><h3>Conversions per day</h3></div>
+      <p class="cs">{{dailyNote}}</p>
+      <div class="chart" id="c-daily"></div>
+    </div>
+    <div class="card">
+      <div class="ct"><h3>Browser profiles, running total</h3></div>
+      <p class="cs">{{idsNote}}</p>
+      <div class="chart" id="c-ids"></div>
+      <div class="legend">
+        <span><i class="sw"></i>All profiles</span>
+        <span><i class="sw ref"></i>Excluding my own testing and datacenter traffic</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <p class="eyebrow">{{caveatEyebrow}}</p>
+    <h2>{{caveatHeading}}</h2>
+    <p class="note">{{caveatNote}}</p>
+  </div>
+  <div class="card">
+    <div class="ct"><h3>{{profiles}} profiles, broken down</h3></div>
+    <p class="cs">{{breakdownNote}}</p>
+    <div class="bd" id="c-bd"></div>
+    <p class="note" style="margin-top:16px">{{breakdownAfter}}</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <h2>{{failHeading}}</h2>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="ct"><h3>Failed attempts per day</h3></div>
+      <p class="cs">{{failNote}}</p>
+      <div class="chart" id="c-fail"></div>
+    </div>
+    <div class="callout">
+      <div class="ch"><span class="badge">{{calloutBadge}}</span></div>
+      <h3 style="font-family:'Unbounded',system-ui,sans-serif;font-size:17px;letter-spacing:-.01em">{{calloutTitle}}</h3>
+      {{calloutBody}}
+    </div>
+  </div>
+</section>
+
+<details>
+  <summary>All {{days}} days as a table</summary>
+  <div class="tbwrap"><table id="tbl">
+    <thead><tr><th>Date</th><th>Profiles</th><th>New</th><th>Attempts</th><th>Completed</th><th>Failed</th><th>Downloads</th><th>Cumulative</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</details>
+
+<footer>
+  {{footer}}
+</footer>
+</div>
+
+<script>
+/*DATA*/
+
+const $=s=>document.querySelector(s);
+const fmt=n=>n.toLocaleString("en-US");
+const SVGNS="http://www.w3.org/2000/svg";
+const el=(n,a={})=>{const e=document.createElementNS(SVGNS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const shortDate=s=>{const[,m,d]=s.split("-");return +d+" "+["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m];};
+
+/* Rounded at the value end, square on the baseline. */
+function barPath(x,y,w,h,r){
+  if(h<=0)return "";
+  r=Math.min(r,w/2,h);
+  return `M${x},${y+h} L${x},${y+r} Q${x},${y} ${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h} Z`;
+}
+
+function frame(host,{h=210,W=760,padL=38,padR=10,padT=12,padB=26}={}){
+  const svg=el("svg",{viewBox:`0 0 ${W} ${h}`,role:"img"});
+  host.appendChild(svg);
+  const tip=document.createElement("div");tip.className="tip";host.appendChild(tip);
+  return {svg,W,h,padL,padR,padT,padB,iw:W-padL-padR,ih:h-padT-padB,tip};
+}
+
+function yAxis(f,max,ticks=4){
+  for(let i=0;i<=ticks;i++){
+    const v=Math.round(max*i/ticks), y=f.padT+f.ih-(v/max)*f.ih;
+    f.svg.appendChild(el("line",{x1:f.padL,x2:f.W-f.padR,y1:y,y2:y,stroke:"var(--grid)","stroke-width":1}));
+    const t=el("text",{x:f.padL-8,y:y+4,"text-anchor":"end",fill:"var(--faint)","font-size":10.5,
+      "font-family":"Geist Mono, monospace"});t.textContent=fmt(v);f.svg.appendChild(t);
+  }
+}
+function xLabels(f,days,every=6){
+  // Draw every Nth date plus the last one, skipping any that would collide.
+  let lastX=-Infinity;
+  const MIN_GAP=40;
+  days.forEach((d,i)=>{
+    const isLast=i===days.length-1;
+    if(i%every&&!isLast)return;
+    const x=f.padL+(i+.5)*(f.iw/days.length);
+    if(x-lastX<MIN_GAP){
+      if(!isLast)return;
+      const prev=f.svg.querySelector("text[data-xlab]:last-of-type");
+      if(prev)prev.remove();          // the last date wins the collision
+    }
+    lastX=x;
+    const t=el("text",{x,y:f.h-8,"text-anchor":"middle",fill:"var(--faint)","font-size":10.5,
+      "font-family":"Geist Mono, monospace"});
+    t.setAttribute("data-xlab","");
+    t.textContent=shortDate(d.d);f.svg.appendChild(t);
+  });
+}
+
+/* Shared hover: nearest index by pointer x. */
+function hover(f,days,render){
+  const cur=el("line",{y1:f.padT,y2:f.padT+f.ih,stroke:"var(--mark-line)","stroke-width":1,opacity:0});
+  f.svg.appendChild(cur);
+  const step=f.iw/days.length;
+  const move=e=>{
+    const r=f.svg.getBoundingClientRect(), sc=r.width/f.W;
+    const x=(e.clientX-r.left)/sc;
+    let i=Math.floor((x-f.padL)/step);
+    if(i<0||i>=days.length){leave();return;}
+    const cx=f.padL+(i+.5)*step;
+    cur.setAttribute("x1",cx);cur.setAttribute("x2",cx);cur.setAttribute("opacity",1);
+    f.tip.innerHTML=render(days[i]);
+    f.tip.style.opacity=1;
+    f.tip.style.left=Math.min(Math.max(cx*sc,74),r.width-74)+"px";
+    f.tip.style.top=(f.padT*sc-6)+"px";
+  };
+  const leave=()=>{cur.setAttribute("opacity",0);f.tip.style.opacity=0;};
+  f.svg.addEventListener("pointermove",move);
+  f.svg.addEventListener("pointerleave",leave);
+}
+const tipRow=(k,v)=>`<div class="tr"><span>${k}</span><span class="tv">${fmt(v)}</span></div>`;
+
+/* ---- cumulative area ---- */
+function areaChart(host,days,key,h,W=900){
+  const f=frame(host,{h,W});
+  const max=Math.max(...days.map(d=>d[key]));
+  yAxis(f,max);xLabels(f,days,6);
+  const px=i=>f.padL+(i+.5)*(f.iw/days.length);
+  const py=v=>f.padT+f.ih-(v/max)*f.ih;
+  let line=days.map((d,i)=>`${i?"L":"M"}${px(i)},${py(d[key])}`).join(" ");
+  const g=el("linearGradient",{id:"gfill",x1:0,y1:0,x2:0,y2:1});
+  g.appendChild(el("stop",{offset:"0%","stop-color":"var(--mark)","stop-opacity":".26"}));
+  g.appendChild(el("stop",{offset:"100%","stop-color":"var(--mark)","stop-opacity":"0"}));
+  const defs=el("defs");defs.appendChild(g);f.svg.appendChild(defs);
+  f.svg.appendChild(el("path",{d:`${line} L${px(days.length-1)},${f.padT+f.ih} L${px(0)},${f.padT+f.ih} Z`,fill:"url(#gfill)"}));
+  f.svg.appendChild(el("path",{d:line,fill:"none",stroke:"var(--mark)","stroke-width":2.5,
+    "stroke-linejoin":"round","stroke-linecap":"round"}));
+  const last=days[days.length-1];
+  f.svg.appendChild(el("circle",{cx:px(days.length-1),cy:py(last[key]),r:4.5,fill:"var(--mark)",
+    stroke:"var(--surface)","stroke-width":2}));
+  const lt=el("text",{x:px(days.length-1)-8,y:py(last[key])-12,"text-anchor":"end",fill:"var(--ink)",
+    "font-size":13,"font-weight":700,"font-family":"Geist Mono, monospace"});
+  lt.textContent=fmt(last[key]);f.svg.appendChild(lt);
+  hover(f,days,d=>`<div class="td">${shortDate(d.d)}</div>${tipRow("Total",d[key])}${tipRow("That day",d.succeeded)}`);
+}
+
+/* ---- daily bars ---- */
+function barChart(host,days,key,h,extra,W=430){
+  const f=frame(host,{h,W,padL:30});
+  const max=Math.max(1,...days.map(d=>d[key]));
+  yAxis(f,max,3);xLabels(f,days,10);
+  const step=f.iw/days.length, bw=Math.max(4,step-4);
+  days.forEach((d,i)=>{
+    const bh=(d[key]/max)*f.ih;
+    if(bh<=0)return;
+    const x=f.padL+i*step+(step-bw)/2, y=f.padT+f.ih-bh;
+    f.svg.appendChild(el("path",{d:barPath(x,y,bw,bh,3),fill:"var(--mark)"}));
+  });
+  hover(f,days,d=>`<div class="td">${shortDate(d.d)}</div>`+extra(d));
+}
+
+/* ---- profiles: solid total + dashed reference ---- */
+function idsChart(host,days,h,W=430){
+  const f=frame(host,{h,W,padL:30});
+  const max=Math.max(...days.map(d=>d.cumIds));
+  yAxis(f,max,4);xLabels(f,days,10);
+  const px=i=>f.padL+(i+.5)*(f.iw/days.length);
+  const py=v=>f.padT+f.ih-(v/max)*f.ih;
+  const path=k=>days.map((d,i)=>`${i?"L":"M"}${px(i)},${py(d[k])}`).join(" ");
+  f.svg.appendChild(el("path",{d:path("cumIdsExt"),fill:"none",stroke:"var(--ref)","stroke-width":2,
+    "stroke-dasharray":"5 4","stroke-linecap":"round",opacity:".75"}));
+  f.svg.appendChild(el("path",{d:path("cumIds"),fill:"none",stroke:"var(--mark)","stroke-width":2.5,
+    "stroke-linejoin":"round","stroke-linecap":"round"}));
+  const last=days[days.length-1];
+  f.svg.appendChild(el("circle",{cx:px(days.length-1),cy:py(last.cumIds),r:4,fill:"var(--mark)",
+    stroke:"var(--surface)","stroke-width":2}));
+  hover(f,days,d=>`<div class="td">${shortDate(d.d)}</div>${tipRow("All profiles",d.cumIds)}${tipRow("Excl. self/bots",d.cumIdsExt)}${tipRow("New that day",d.newIds)}`);
+}
+
+/* ---- breakdown ---- */
+const BD_COPY={
+  converted:["Completed at least one conversion","real use of the tool",false],
+  bounced:["Opened the page once and left","a single pageview, nothing else",true],
+  visited:["Looked around but never converted","multiple events, no output",true],
+  self:["My own testing","San Diego, across browsers",true],
+  datacenter:["Bots and scanners","cloud datacenter ranges",true]
+};
+function breakdown(host,buckets){
+  const max=Math.max(...buckets.map(b=>b.n));
+  host.innerHTML=buckets.map(b=>{
+    const [title,sub,muted]=BD_COPY[b.k];
+    return `<div class="bdrow">
+      <div class="bdlab"><b>${title}</b><em>${sub}</em></div>
+      <div class="bdbar"><i class="${muted?"mut":""}" style="width:${(b.n/max*100).toFixed(1)}%"></i></div>
+      <div class="bdval">${b.n}</div></div>`;
+  }).join("");
+}
+
+/* ---- build ---- */
+const pct=(a,b)=>Math.round(a/b*100);
+$("#t-ok").textContent=fmt(TOT.succeeded);
+$("#t-ok-s").textContent=pct(TOT.succeeded,TOT.started)+"% of attempts";
+$("#t-try").textContent=fmt(TOT.started);
+$("#t-try-s").textContent=TOT.failed+" failed outright";
+$("#t-dl").textContent=fmt(TOT.downloads);
+$("#t-dl-s").textContent=pct(TOT.downloads,TOT.succeeded)+"% of completed videos";
+$("#t-id").textContent=fmt(TOT.profiles);
+$("#t-pwa").textContent=fmt(TOT.pwa);
+
+areaChart($("#c-cum"),DAYS,"cumOk",300);
+barChart($("#c-daily"),DAYS,"succeeded",190,d=>tipRow("Completed",d.succeeded)+tipRow("Attempts",d.started));
+idsChart($("#c-ids"),DAYS,190);
+barChart($("#c-fail"),DAYS,"failed",190,d=>tipRow("Failed",d.failed)+tipRow("Attempts",d.started));
+breakdown($("#c-bd"),BUCKETS);
+
+$("#tbl").querySelector("tbody").innerHTML=DAYS.map(d=>
+  `<tr><td>${d.d}</td><td>${d.users}</td><td>${d.newIds}</td><td>${d.started}</td>
+   <td>${d.succeeded}</td><td>${d.failed}</td><td>${d.downloads}</td><td>${d.cumOk}</td></tr>`).join("");
+</script>

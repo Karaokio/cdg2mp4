@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "insights": "node scripts/insights.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "0.12.10",

@@ -27,9 +27,11 @@ export default tseslint.config(
     },
   },
   {
-    // Node-side files: build config, scripts, e2e tests.
+    // Node-side files: build config, scripts, e2e tests. Browser globals are
+    // included because these drive a page (Playwright `page.evaluate` callbacks
+    // are authored here but execute in the browser context).
     files: ["**/*.config.{ts,js,mjs}", "scripts/**", "e2e/**"],
-    languageOptions: { globals: globals.node },
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   prettier
 );
