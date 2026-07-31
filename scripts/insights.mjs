@@ -8,6 +8,10 @@
 // data URIs and the charts are hand-rolled SVG, because the page is published as
 // an Artifact where a strict CSP blocks every external request.
 //
+// Everything on the page is either a number from PostHog or a definitional note
+// explaining how to read that number (scripts/insights/notes.json). Nothing is a
+// dated observation, so any rerun is publishable as-is without re-reading prose.
+//
 // Needs POSTHOG_API_KEY in .env (a personal API key — unlike the VITE_* vars this
 // one IS a secret; it is only ever read here, never bundled into the app).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -138,10 +142,8 @@ const LONG = (iso) => {
 };
 
 function statTokens({ days, totals, buckets }) {
-  const top = [...days]
-    .sort((a, b) => b.succeeded - a.succeeded)
-    .slice(0, 3)
-    .sort((a, b) => (a.d < b.d ? -1 : 1));
+  const top = [...days].sort((a, b) => b.succeeded - a.succeeded);
+  const byVolume = top.slice(0, 3).sort((a, b) => (a.d < b.d ? -1 : 1));
   const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const short = (iso) => {
     const [, m, d] = iso.split("-");
@@ -164,9 +166,10 @@ function statTokens({ days, totals, buckets }) {
     converted: String(buckets.find((b) => b.k === "converted")?.n ?? 0),
     successPct: `${pct(totals.succeeded, totals.started)}%`,
     downloadPct: `${pct(totals.downloads, totals.succeeded)}%`,
-    topDays: top
-      .map((d, i) => (i === top.length - 1 ? `and ${short(d.d)}` : short(d.d)))
-      .join(top.length > 2 ? ", " : " "),
+    topDay: `${short(top[0].d)} (${top[0].succeeded.toLocaleString("en-US")})`,
+    topDays: byVolume
+      .map((d, i) => (i === byVolume.length - 1 ? `and ${short(d.d)}` : short(d.d)))
+      .join(byVolume.length > 2 ? ", " : " "),
     generatedOn: LONG(new Date().toISOString().slice(0, 10)),
   };
 }
@@ -205,7 +208,7 @@ function build(model, notes) {
   const vars = statTokens(model);
   const prose = {};
   for (const [k, v] of Object.entries(notes)) {
-    if (k.startsWith("_") || k === "writtenFor") continue;
+    if (k.startsWith("_")) continue;
     prose[k] = Array.isArray(v)
       ? v
           .map(
@@ -225,22 +228,12 @@ function build(model, notes) {
       "/*DATA*/",
       `const DAYS=${JSON.stringify(model.days)};\n` +
         `const TOT=${JSON.stringify(model.totals)};\n` +
-        `const BUCKETS=${JSON.stringify(model.buckets)};\n`
+        `const BUCKETS=${JSON.stringify(model.buckets)};\n` +
+        `const FAILS=${JSON.stringify(model.failures)};\n`
     );
   if (html.includes("/*FONTS*/") || html.includes("/*DATA*/"))
     fail("template placeholder not replaced");
   return html;
-}
-
-/** The one thing a rerun cannot refresh: the prose. Say so, loudly. */
-function warnStale(notes, vars) {
-  const w = notes.writtenFor ?? {};
-  if (w.from === vars.rangeFrom && w.to === vars.rangeTo) return;
-  console.warn(
-    `\n[insights] NOTE: the narrative in scripts/insights/notes.json was written for ` +
-      `${w.from ?? "?"} → ${w.to ?? "?"}, but the data now covers ${vars.rangeFrom} → ${vars.rangeTo}.\n` +
-      `[insights] Numbers regenerated; sentences did not. Re-read that file and bump "writtenFor".\n`
-  );
 }
 
 async function render(file) {
@@ -302,5 +295,4 @@ log(
   `${model.days.length} days, ${model.totals.succeeded} conversions, ${model.totals.profiles} profiles`
 );
 log(`wrote ${out} (${Math.round(html.length / 1024)} KB)`);
-warnStale(notes, statTokens(model));
 if (flag("check")) await render(out);

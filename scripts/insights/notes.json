@@ -1,41 +1,35 @@
 {
-  "_comment": [
-    "The interpretive prose on the insights page. Numbers on the page regenerate",
-    "from PostHog every run; these sentences do not. `writtenFor` records the data",
-    "range they were written against — when the data moves past it, the build",
-    "prints a warning naming this file. Re-read the copy and bump the range.",
+  "_convention": [
+    "Keep every string here DEFINITIONAL: what a number measures and how to read",
+    "it. No observations about a particular week ('three spikes carry the month'),",
+    "no named users, no incident write-ups. Those age badly and a rerun cannot",
+    "refresh them; put that kind of analysis in a blog post or issue instead.",
     "",
-    "Any {{token}} is substituted with a computed stat (see STAT_TOKENS in",
-    "scripts/insights.mjs), so prefer a token over typing a number by hand."
+    "Anything that is really a derived statistic should be a {{token}} rather than",
+    "a typed-in number (see STAT_TOKENS in scripts/insights.mjs)."
   ],
-  "writtenFor": { "from": "2026-06-27", "to": "2026-07-30" },
 
-  "title": "cdg2mp4 — first month of data",
+  "title": "cdg2mp4 — usage",
   "eyebrow": "Karaokio · cdg2mp4",
-  "headline": "The first month of actually knowing",
-  "lede": "For seven years the only signal this tool produced was email when it broke. Analytics went live on {{rangeFromLong}}. Here is every number it has recorded since, including the ones that flatter the project less than the headline does.",
+  "headline": "Conversion analytics",
+  "lede": "Everything the converter records, covering {{rangeFromLong}} to {{rangeToLong}}. The tool runs entirely in the browser, so these are anonymous counts of events, not accounts. Each panel says what it measures and how to read it.",
 
   "cumHeading": "Conversions, running total",
-  "cumNote": "The curve is flat for most of the period and then turns almost vertical at the end. That is not a marketing win. It is a handful of people discovering they can feed the tool an entire disc collection.",
+  "cumNote": "Every completed conversion since tracking began. Read the slope, not the height: a near-vertical stretch is usually one person working through a disc collection rather than a jump in how many people are using the tool. Check it against the profiles chart before treating it as growth.",
 
-  "dailyNote": "Three spikes carry the month: {{topDays}}. Each is one person working through a library.",
-  "idsNote": "Arrivals are steady and roughly linear, unlike conversions. New people keep showing up at about the same rate whether or not a power user is mid-binge.",
+  "dailyNote": "Completed conversions per day. Because a single person can run dozens in a session, a tall bar is a usage-depth signal, not an audience signal. The busiest day here is {{topDay}}.",
+  "idsNote": "Browser profiles seen, accumulating. This is the closest thing to an audience curve: it moves when new people arrive, and stays flat while an existing user is mid-batch. The dashed line drops my own testing and traffic from cloud datacenter ranges.",
 
-  "caveatEyebrow": "The honest caveat",
-  "caveatHeading": "What “{{profiles}} users” actually counts",
-  "caveatNote": "PostHog identifies anonymous visitors with a per-browser ID kept in local storage, and this app never calls <code>identify</code>, so nothing is ever merged across devices. One ID means one browser profile that has not cleared its storage. It does not mean one person. Every ID is a UUIDv7, so the creation time can be decoded: the median gap between an ID being minted and its first event is half a second, confirming a fresh ID per new browser profile rather than per human.",
-  "breakdownNote": "Sorted by how much they tell you. Only the first row represents anyone who used the tool for its purpose.",
-  "breakdownAfter": "Even {{converted}} overstates it. Same-city, same-OS profiles created minutes apart show up repeatedly: the heaviest user in Florida appears as two profiles totalling 291 conversions, and Lima, Medellín and Tlaxcala each show a pair. A realistic count of humans who have completed a conversion is closer to 35 than to {{profiles}}.",
+  "caveatEyebrow": "Read this before quoting a user count",
+  "caveatHeading": "A profile is not a person",
+  "caveatNote": "PostHog identifies anonymous visitors with a per-browser ID kept in local storage, and this app never calls <code>identify</code>, so nothing is ever merged across devices. One ID means one browser profile that still has its storage. The same person counts twice across two browsers, across a laptop and a phone, or after clearing site data. Treat the total as an upper bound, and the “completed at least one conversion” row as the only one that reflects real use.",
+  "breakdownNote": "What the {{profiles}} profiles are actually made of. Only the first row used the tool for its purpose.",
+  "breakdownAfter": "Even the converted row overstates the number of humans: profiles created minutes apart in the same city, on the same operating system, are usually one person on two machines. A realistic headcount is somewhat below {{converted}}.",
 
   "failHeading": "Where attempts go wrong",
-  "failNote": "{{failed}} failures across {{started}} attempts. Most days are zero. The clusters are not random.",
+  "failNote": "Failed attempts per day, {{failed}} of {{started}} in total. A cluster from very few profiles usually means one machine cannot run the converter at all, which repeats on every visit; a spread across many profiles is more likely a real regression. The table names the causes.",
+  "failTableHeading": "Failure reasons",
+  "failTableNote": "Grouped by the reason code the app assigns and the stage it failed at. <code>bad_input</code> and the <code>zip_missing_*</code> codes are user-side (the wrong files were dropped). <code>load_failed</code> means the converter never started, which points at the browser or the network rather than the file.",
 
-  "calloutBadge": "Open issue",
-  "calloutTitle": "One machine has never once succeeded",
-  "calloutBody": [
-    "Two browser profiles in the same Mexican city, created 32 minutes apart, have tried 18 times across four visits since July 4 and failed every time inside 3 seconds. Firefox names the cause: <code>v128 not enabled</code>, the WebAssembly SIMD type the ffmpeg core requires. Chrome 109 and Firefox 115 are the last versions available on Windows 7, 8 and 8.1, so upgrading is not available to them.",
-    "They retried, toggled offline storage, switched themes, and opened the feedback form twice. The app told them to “try again”, which will never work on that hardware. Filed as <a href=\"https://github.com/Karaokio/cdg2mp4/issues/75\">issue #75</a>: detect the missing capability up front and offer the command-line fallback instead."
-  ],
-
-  "footer": "Events are anonymous: no accounts, no file contents, no identities. Filenames and coarse IP geolocation are recorded; the conversion itself runs entirely in the browser. “Self” traffic is my own testing; “datacenter” is bot and scanner traffic from cloud regions. Generated {{generatedOn}} from data through {{rangeToLong}}."
+  "footer": "Events are anonymous: no accounts, no file contents, no identities. Filenames and coarse IP geolocation are recorded; the conversion itself runs entirely in the browser and files are never uploaded. “Self” is my own testing; “datacenter” is bot and scanner traffic from cloud regions. Generated {{generatedOn}} by <code>npm run insights</code> from data through {{rangeToLong}}."
 }

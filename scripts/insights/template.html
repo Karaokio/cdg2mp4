@@ -561,18 +561,22 @@
         <p class="cs">{{failNote}}</p>
         <div class="chart" id="c-fail"></div>
       </div>
-      <div class="callout">
-        <div class="ch"><span class="badge">{{calloutBadge}}</span></div>
-        <h3
-          style="
-            font-family: &quot;Unbounded&quot;, system-ui, sans-serif;
-            font-size: 17px;
-            letter-spacing: -0.01em;
-          "
-        >
-          {{calloutTitle}}
-        </h3>
-        {{calloutBody}}
+      <div class="card">
+        <div class="ct"><h3>{{failTableHeading}}</h3></div>
+        <p class="cs">{{failTableNote}}</p>
+        <div class="tbwrap">
+          <table id="failtbl">
+            <thead>
+              <tr>
+                <th>Reason</th>
+                <th>Stage</th>
+                <th>Failures</th>
+                <th>Profiles</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -863,7 +867,7 @@
     converted: ["Completed at least one conversion", "real use of the tool", false],
     bounced: ["Opened the page once and left", "a single pageview, nothing else", true],
     visited: ["Looked around but never converted", "multiple events, no output", true],
-    self: ["My own testing", "San Diego, across browsers", true],
+    self: ["My own testing", "development machines, any browser", true],
     datacenter: ["Bots and scanners", "cloud datacenter ranges", true],
   };
   function breakdown(host, buckets) {
@@ -913,4 +917,13 @@
       `<tr><td>${d.d}</td><td>${d.users}</td><td>${d.newIds}</td><td>${d.started}</td>
    <td>${d.succeeded}</td><td>${d.failed}</td><td>${d.downloads}</td><td>${d.cumOk}</td></tr>`
   ).join("");
+
+  const esc = (s) =>
+    String(s ?? "—").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  $("#failtbl").querySelector("tbody").innerHTML = FAILS.length
+    ? FAILS.map(
+        (f) =>
+          `<tr><td>${esc(f.reason)}</td><td>${esc(f.stage)}</td><td>${fmt(f.c)}</td><td>${fmt(f.ids)}</td></tr>`
+      ).join("")
+    : `<tr><td colspan="4">No failures recorded.</td></tr>`;
 </script>
