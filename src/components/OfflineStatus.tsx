@@ -4,8 +4,7 @@ import { Tooltip } from "@/components/ui";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "@/lib/coreUrls";
 import { track } from "@/lib/analytics";
 import { isConverting, subscribeConverting } from "@/lib/converting";
-import { selectPipeline } from "@/lib/convert";
-import { resolutionToSize } from "@/lib/format";
+import { usePipeline } from "@/lib/usePipeline";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
@@ -74,13 +73,8 @@ export function OfflineStatus() {
   // On the native pipeline there is no core to download: the app shell is
   // precached by the service worker and the conversion needs nothing else, so
   // the device is already offline-ready. Null until detection resolves.
-  const [native, setNative] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    // Any resolution answers the question; support does not vary between them
-    // in practice, and the pill is not per-resolution.
-    void selectPipeline(resolutionToSize("1080p")).then((p) => setNative(p === "webcodecs"));
-  }, []);
+  const pipeline = usePipeline();
+  const native = pipeline === null ? null : pipeline === "webcodecs";
 
   const refresh = React.useCallback(async () => setCached(await isCoreCached()), []);
 

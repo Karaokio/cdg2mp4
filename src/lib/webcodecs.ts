@@ -60,7 +60,7 @@ let active: { worker: Worker; cancel: () => void } | null = null;
  * conversion rejects with "Conversion cancelled." No-op when idle.
  */
 export function cancelNativeConversion(): void {
-  if (active) log("cancelled — terminating the encoder worker");
+  if (active) log("cancelled · terminating the encoder worker");
   active?.cancel();
 }
 

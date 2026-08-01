@@ -54,15 +54,15 @@ export async function selectPipeline(size: string): Promise<Pipeline> {
     return forced;
   }
   if (await canUseWebCodecs(size)) {
-    announce("pipeline: webcodecs — native H.264 encoder, nothing to download");
+    announce("pipeline: webcodecs · native H.264 encoder, nothing to download");
     return "webcodecs";
   }
   // Say which of the two reasons it is, since they lead somewhere different:
   // one is a slow conversion, the other is no conversion at all.
   announce(
     hasWasmSimd()
-      ? "pipeline: ffmpeg.wasm — no usable H.264 encoder here, falling back"
-      : "pipeline: ffmpeg.wasm — no H.264 encoder and no wasm SIMD, this device cannot convert"
+      ? "pipeline: ffmpeg.wasm · no usable H.264 encoder here, falling back"
+      : "pipeline: ffmpeg.wasm · no H.264 encoder and no wasm SIMD, this device cannot convert"
   );
   return "ffmpeg";
 }

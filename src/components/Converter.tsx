@@ -6,6 +6,7 @@ import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/fo
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
+import { usePipeline } from "@/lib/usePipeline";
 import { log, logError, mb, secs } from "@/lib/log";
 import { SIMD_UNSUPPORTED_MESSAGE } from "@/lib/wasmFeatures";
 import { FeedbackPrompt } from "@/components/Feedback";
@@ -74,24 +75,14 @@ export function Converter() {
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   // Real filenames for the "run it locally" command, once a conversion knows them.
   const [lastNames, setLastNames] = React.useState<CommandNames | undefined>();
-  // Which pipeline the next conversion would use, for the copy below. Null
-  // until detection resolves (a promise, since it probes the H.264 encoder).
-  const [nextPipeline, setNextPipeline] = React.useState<Pipeline | null>(null);
   // The input and pipeline of the last failed run, for the retry offer below.
   const [lastRun, setLastRun] = React.useState<RunInput | null>(null);
   const [failedPipeline, setFailedPipeline] = React.useState<Pipeline | null>(null);
+  const nextPipeline = usePipeline(resolution);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
   const cancelled = React.useRef(false); // user hit Cancel during this run
   const progressNow = React.useRef(0); // latest progress, for the cancel event
-
-  React.useEffect(() => {
-    let live = true;
-    void selectPipeline(resolutionToSize(resolution)).then((p) => live && setNextPipeline(p));
-    return () => {
-      live = false;
-    };
-  }, [resolution]);
 
   // Revoke the object URL when it's replaced or the component unmounts.
   React.useEffect(() => {
@@ -130,8 +121,8 @@ export function Converter() {
       let audioCodec: "aac" | "mp3" | undefined; // native path only
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
-      // Resolved before the first event so every event of this run — including a
-      // failure during load — carries the pipeline that produced it.
+      // Resolved before the first event so every event of this run (including a
+      // failure during load) carries the pipeline that produced it.
       const size = resolutionToSize(resolution);
       const pipeline = force ?? (await selectPipeline(size));
       trackConversionStarted({ input_type: inputType, resolution, pipeline, ...inputNames });
@@ -180,7 +171,7 @@ export function Converter() {
         const elapsed = Date.now() - t0;
         const blob = new Blob([mp4 as BlobPart], { type: "video/mp4" });
         log(
-          `done in ${secs(elapsed)} — ${mb(blob.size)}, ` +
+          `done in ${secs(elapsed)} · ${mb(blob.size)}, ` +
             `${(songSeconds / (elapsed / 1000)).toFixed(1)}x realtime`,
           { pipeline, resolution, audio: audioCodec }
         );
@@ -462,7 +453,7 @@ export function Converter() {
           </div>
           {/* The native pipeline is new; ffmpeg.wasm has converted these files
               for years. When the new one fails on a device or a rip we cannot
-              reproduce, the old one is right there — so offer it at the only
+              reproduce, the old one is right there, so offer it at the only
               moment it is useful, rather than making everyone choose an engine
               up front. Not offered when ffmpeg.wasm is what just failed, nor
               for a bad input that would fail identically either way. */}

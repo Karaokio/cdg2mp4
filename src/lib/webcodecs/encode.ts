@@ -250,7 +250,7 @@ export async function encodeCdgToMp4(
     // that holds the last graphic, so it is worth seeing both numbers.
     const cdgSeconds = cdg.byteLength / (PACKETS_PER_SEC * 24);
     log(
-      `${frames} frames at ${FPS}fps — ${audio.duration.toFixed(1)}s of audio, ` +
+      `${frames} frames at ${FPS}fps · ${audio.duration.toFixed(1)}s of audio, ` +
         `${cdgSeconds.toFixed(1)}s of graphics`
     );
 

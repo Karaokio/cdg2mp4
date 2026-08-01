@@ -2,6 +2,7 @@ import * as React from "react";
 import { Button } from "@/components/ui";
 import { RESOLUTIONS, type ResKey } from "@/lib/format";
 import { track } from "@/lib/analytics";
+import { usePipeline } from "@/lib/usePipeline";
 
 /** Filenames to substitute into the command; placeholders fill any gaps. */
 export type CommandNames = { cdg?: string; mp3?: string };
@@ -43,6 +44,7 @@ export function FfmpegCommand({
    */
   autoOpen?: boolean;
 }) {
+  const pipeline = usePipeline(resolution);
   const [copied, setCopied] = React.useState(false);
   // Opened imperatively rather than via an `open` prop: React would treat that
   // as controlled and snap the disclosure back shut on the next render, so the
@@ -84,8 +86,16 @@ export function FfmpegCommand({
         Prefer the command line?
       </summary>
       <div className="mt-md flex flex-col gap-sm text-left">
+        {/* "ffmpeg compiled for your browser" was true of every visitor once.
+            It is now true only of the fallback: the native path runs no ffmpeg
+            at all. The command below is still the way to do it locally either
+            way, which is the only claim this disclosure has to make. */}
         <p>
-          This site uses ffmpeg compiled for your browser.
+          {pipeline === "webcodecs"
+            ? "This site converts with the video encoder built into your browser."
+            : pipeline === "ffmpeg"
+              ? "This site uses ffmpeg compiled for your browser."
+              : "This site converts entirely on your device."}
           <br />
           The same conversion can run on your own machine with the following command:
         </p>

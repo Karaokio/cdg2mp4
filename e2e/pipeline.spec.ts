@@ -168,6 +168,25 @@ test.describe("conversion pipelines", () => {
     await expect(page.getByRole("link", { name: /download mp4/i })).toBeVisible();
   });
 
+  // The footer credits whatever is actually converting, and the command
+  // disclosure explains what this site does. Both were true of every visitor
+  // when ffmpeg.wasm was the only pipeline; neither is, now.
+  test("credits the pipeline that is actually running", async ({ page }) => {
+    const native = await nativeAvailable(page);
+    const footer = page.locator("footer");
+    await expect(footer).toContainText(native ? /powered by WebCodecs/i : /powered by ffmpeg/i);
+    await expect(footer).not.toContainText(native ? /powered by ffmpeg/i : /WebCodecs/i);
+
+    await page.getByText(/prefer the command line/i).click();
+    await expect(page.getByText(/this site (converts|uses)/i)).toContainText(
+      native ? /built into your browser/i : /ffmpeg compiled for your browser/i
+    );
+
+    // Forcing the other pipeline flips both, so neither is hardcoded.
+    await page.goto("/?pipeline=ffmpeg");
+    await expect(page.locator("footer")).toContainText(/powered by ffmpeg/i);
+  });
+
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {
     test.skip(!(await nativeAvailable(page)), "this browser does need the wasm core");
     await page.goto("/");
