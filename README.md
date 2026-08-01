@@ -133,6 +133,13 @@ test/files/         self-generated, copyright-free sample.{cdg,mp3,zip} fixtures
                     plus sample-key.cdg (transparent background, see the spec)
 ```
 
+## Credits and licences
+
+[CREDITS.md](CREDITS.md) lists every component, who wrote it, and its licence.
+Two carry obligations rather than courtesy: `@ffmpeg/core` is **GPL-2.0-or-later**
+(it bundles x264) and `mediabunny` is **MPL-2.0**. Both ship unmodified, and both
+are named with a link to their source, in the file and from the app's footer.
+
 ## Watching a conversion
 
 Open the browser console. Every conversion prints a short trace: which pipeline
