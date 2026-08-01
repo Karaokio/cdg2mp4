@@ -1,6 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { cdgSongSeconds, classifyError, errorDetail, mbBucket, fileName } from "./analytics";
+import {
+  cdgSongSeconds,
+  classifyError,
+  errorDetail,
+  mbBucket,
+  outputKbps,
+  fileName,
+} from "./analytics";
 import { SIMD_UNSUPPORTED_MESSAGE } from "./wasmFeatures";
+
+describe("outputKbps", () => {
+  // The two pipelines land in the same output_mb_bucket on a typical song, so
+  // this is what actually distinguishes them.
+  it("normalizes file size by song length", () => {
+    expect(outputKbps(6.1 * 1048576, 188)).toBe(275);
+    expect(outputKbps(4.7 * 1048576, 188)).toBe(200);
+  });
+
+  it("rounds to 25 kbps so it is never a precise file size", () => {
+    expect(outputKbps(1_000_000, 60) % 25).toBe(0);
+  });
+
+  it("is 0 rather than Infinity for a zero-length song", () => {
+    expect(outputKbps(1_000_000, 0)).toBe(0);
+  });
+});
 
 describe("classifyError", () => {
   // The real user-facing messages from zip.ts / ffmpeg.ts / Converter.tsx.

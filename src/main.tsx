@@ -13,7 +13,9 @@ import "@fontsource/geist-mono/400.css";
 
 import "./styles/index.css";
 import { APP_NAME, COMPANY, APP_VERSION, BUILD_COMMIT, BUILD_TIME } from "@/lib/buildInfo";
-import { initAnalytics } from "@/lib/analytics";
+import { initAnalytics, setAnalyticsNativeCapable } from "@/lib/analytics";
+import { canUseWebCodecs } from "@/lib/webcodecs";
+import { resolutionToSize } from "@/lib/format";
 import { installDomGuard } from "@/lib/domGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "@/App";
@@ -27,7 +29,13 @@ console.info(
 );
 
 // Product analytics (lazy-loaded; no-op unless a PostHog key is configured).
-void initAnalytics();
+// Tag the session with whether this device can run the native pipeline, so the
+// rollout's reach is visible across every visitor rather than only the ones who
+// convert. Probed at the default resolution; support does not vary between them
+// in practice.
+void initAnalytics().then(async () => {
+  setAnalyticsNativeCapable(await canUseWebCodecs(resolutionToSize("1080p")));
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

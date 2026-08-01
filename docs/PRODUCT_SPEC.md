@@ -53,6 +53,14 @@ Selection order:
 2. Otherwise **ffmpeg.wasm**, which preflights Wasm SIMD and explains the dead end when the
    CPU lacks it (section 4b).
 
+There is no engine picker. The choice is not one a user can reason about, and the product
+is one drop and one quality knob. Instead the fallback is offered at the only moment it
+helps: a native conversion that fails shows a "Try the original converter" button, which
+re-runs the same input on ffmpeg.wasm. It is not offered when ffmpeg.wasm is what failed,
+nor for a bad input that would fail identically either way. `pipeline_retry_used` records
+each time it is taken, which is the direct measure of whether the native path is letting
+anyone down.
+
 ### 4a. Native pipeline (WebCodecs) — `src/lib/webcodecs.ts`
 
 Runs entirely in a dedicated worker (`src/lib/webcodecs/worker.ts`), one per

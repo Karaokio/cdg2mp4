@@ -57,12 +57,18 @@ export async function convertPair(
     onPipeline?: (pipeline: Pipeline) => void;
     onProgress?: ProgressFn;
     onLog?: LogFn;
+    /** Native pipeline only: which audio codec its fallback chain chose. */
+    onAudioCodec?: (codec: "aac" | "mp3") => void;
   } = {}
 ): Promise<Uint8Array> {
   const size = opts.size ?? "1440x1080";
   const pipeline = opts.pipeline ?? (await selectPipeline(size));
   opts.onPipeline?.(pipeline);
   return pipeline === "webcodecs"
-    ? convertCdgToMp4Native(cdg, mp3, { size, onProgress: opts.onProgress })
+    ? convertCdgToMp4Native(cdg, mp3, {
+        size,
+        onProgress: opts.onProgress,
+        onAudioCodec: opts.onAudioCodec,
+      })
     : convertCdgToMp4(cdg, mp3, { size, onProgress: opts.onProgress, onLog: opts.onLog });
 }

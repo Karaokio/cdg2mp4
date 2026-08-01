@@ -141,6 +141,33 @@ test.describe("conversion pipelines", () => {
     expect(whiteFraction).toBeLessThan(0.25);
   });
 
+  // The safety net for the whole rollout: if the new pipeline fails on a device
+  // or a rip we cannot reproduce, the user is one click from the one that has
+  // worked for years, without anyone having to understand what a pipeline is.
+  test("offers the wasm pipeline after a native failure, and it recovers", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+
+    // Break the native encode only, by making its worker fail to load.
+    // ffmpeg.wasm ships a worker chunk with the same generated name shape, and
+    // aborting that one too would break the retry we are trying to test, so
+    // pick ours out by a string literal only the native pipeline contains.
+    await page.route("**/assets/worker-*.js", async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      if (body.includes("Could not create a drawing canvas")) return route.abort();
+      return route.fulfill({ response, body });
+    });
+
+    await page.locator('input[type="file"]').setInputFiles(sampleZip);
+    const retry = page.getByRole("button", { name: /try the original converter/i });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+
+    await retry.click();
+    await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("link", { name: /download mp4/i })).toBeVisible();
+  });
+
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {
     test.skip(!(await nativeAvailable(page)), "this browser does need the wasm core");
     await page.goto("/");

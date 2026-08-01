@@ -143,7 +143,7 @@ export function parseSize(size: string): [number, number] {
 async function addAudioTrack(
   output: Output,
   mp3: Uint8Array
-): Promise<{ duration: number; run: () => Promise<void> }> {
+): Promise<{ duration: number; codec: "aac" | "mp3"; run: () => Promise<void> }> {
   const input = new Input({ source: new BufferSource(mp3), formats: ALL_FORMATS });
   const track = await input.getPrimaryAudioTrack();
   if (!track) throw new Error("The .mp3 file has no audio track.");
@@ -157,6 +157,7 @@ async function addAudioTrack(
     output.addAudioTrack(source);
     return {
       duration,
+      codec: "aac",
       run: async () => {
         const sink = new AudioSampleSink(track);
         for await (const sample of sink.samples()) {
@@ -175,6 +176,7 @@ async function addAudioTrack(
   output.addAudioTrack(source);
   return {
     duration,
+    codec: "mp3",
     run: async () => {
       const sink = new EncodedPacketSink(track);
       const decoderConfig = await track.getDecoderConfig();
@@ -199,7 +201,11 @@ export async function encodeCdgToMp4(
   cdg: Uint8Array,
   mp3: Uint8Array,
   size: string,
-  onProgress: (ratio: number) => void
+  onProgress: (ratio: number) => void,
+  // Which audio codec the fallback chain settled on. Reported because AAC and
+  // MP3-in-MP4 are not equally playable, and a device quietly getting the
+  // second one is a plausible cause of a "the file won't play" report.
+  onAudioCodec?: (codec: "aac" | "mp3") => void
 ): Promise<ArrayBuffer> {
   const [width, height] = parseSize(size);
 
@@ -234,6 +240,7 @@ export async function encodeCdgToMp4(
 
   try {
     const audio = await addAudioTrack(output, mp3);
+    onAudioCodec?.(audio.codec);
     await output.start();
     await audio.run();
 

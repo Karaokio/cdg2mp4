@@ -48,6 +48,16 @@ export function setAnalyticsTheme(theme: "light" | "dark"): void {
   ph?.register({ theme });
 }
 
+/**
+ * Tag every event, pageviews included, with whether this device can run the
+ * native pipeline. The `pipeline` property on conversion events only covers
+ * people who actually convert; this answers the rollout question -- what share
+ * of visitors the native path can reach at all -- without needing them to.
+ */
+export function setAnalyticsNativeCapable(capable: boolean): void {
+  ph?.register({ native_capable: capable });
+}
+
 /** Report a caught error (e.g. from the React error boundary). No-ops when disabled. */
 export function captureException(error: unknown, props?: Props): void {
   ph?.captureException(error, props);
@@ -81,6 +91,8 @@ export const trackConversionSucceeded = (
     duration_ms: number;
     song_seconds: number;
     output_mb_bucket: string;
+    output_kbps: number;
+    audio_codec?: string;
   } & ConvPipeline &
     ConvFiles
 ) => track("conversion_succeeded", p);
@@ -138,6 +150,20 @@ export function fileName(baseName: string | undefined): string | undefined {
  */
 export function cdgSongSeconds(cdgBytes: number): number {
   return Math.round(cdgBytes / 7200);
+}
+
+/**
+ * Output bitrate, rounded to the nearest 25 kbps.
+ *
+ * `output_mb_bucket` is too coarse to compare the two pipelines: a 3-minute song
+ * is 6 MB on one and 5 MB on the other, and both are "5-20". This normalizes out
+ * song length, so a size regression on either path is visible in an average
+ * rather than needing a bucket boundary to fall in the right place. Rounding
+ * keeps it from being a precise (identifying) file size.
+ */
+export function outputKbps(bytes: number, seconds: number): number {
+  if (!seconds) return 0;
+  return Math.round((bytes * 8) / seconds / 1000 / 25) * 25;
 }
 
 /** Coarse size buckets so an exact (potentially identifying) file size is never stored. */

@@ -16,6 +16,7 @@ import {
   trackConversionCancelled,
   track,
   mbBucket,
+  outputKbps,
   cdgSongSeconds,
   classifyError,
   errorDetail,
@@ -75,6 +76,9 @@ export function Converter() {
   // Which pipeline the next conversion would use, for the copy below. Null
   // until detection resolves (a promise, since it probes the H.264 encoder).
   const [nextPipeline, setNextPipeline] = React.useState<Pipeline | null>(null);
+  // The input and pipeline of the last failed run, for the retry offer below.
+  const [lastRun, setLastRun] = React.useState<RunInput | null>(null);
+  const [failedPipeline, setFailedPipeline] = React.useState<Pipeline | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
   const cancelled = React.useRef(false); // user hit Cancel during this run
@@ -96,7 +100,9 @@ export function Converter() {
   }, [result]);
 
   const run = React.useCallback(
-    async (input: RunInput) => {
+    // `force` re-runs a failed conversion on the other pipeline. Only the retry
+    // passes it; normal runs let selectPipeline decide.
+    async (input: RunInput, force?: Pipeline) => {
       if (result) URL.revokeObjectURL(result.url);
       setResult(null);
       setError("");
@@ -107,6 +113,9 @@ export function Converter() {
       progressNow.current = 0;
       setStatus("working");
       setHeld(null); // consumed by this conversion, or superseded by a zip
+      // Kept so a failure can be retried on the other pipeline. These are File
+      // handles, still readable after the first attempt detached its buffers.
+      setLastRun(input);
 
       const inputType: InputType = input.type;
       // The input filenames, captured up front (contents never leave the device).
@@ -117,12 +126,13 @@ export function Converter() {
       const t0 = Date.now();
       let stage = "read";
       let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
+      let audioCodec: "aac" | "mp3" | undefined; // native path only
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
       // Resolved before the first event so every event of this run — including a
       // failure during load — carries the pipeline that produced it.
       const size = resolutionToSize(resolution);
-      const pipeline = await selectPipeline(size);
+      const pipeline = force ?? (await selectPipeline(size));
       trackConversionStarted({ input_type: inputType, resolution, pipeline, ...inputNames });
       try {
         setPhase("Reading files…");
@@ -147,6 +157,9 @@ export function Converter() {
         const mp4 = await convertPair(pair.cdg, pair.mp3, {
           size,
           pipeline,
+          onAudioCodec: (c) => {
+            audioCodec = c;
+          },
           onProgress: (r) => {
             stage = "convert";
             progressNow.current = r;
@@ -171,6 +184,8 @@ export function Converter() {
           duration_ms: Date.now() - t0,
           song_seconds: songSeconds,
           output_mb_bucket: mbBucket(blob.size),
+          output_kbps: outputKbps(blob.size, songSeconds),
+          audio_codec: audioCodec,
           ...inputNames,
           output_name: outputName,
         });
@@ -193,6 +208,7 @@ export function Converter() {
         const message = e instanceof Error ? e.message : String(e);
         setError(message);
         setStatus("error");
+        setFailedPipeline(pipeline);
         trackConversionFailed({
           input_type: inputType,
           resolution,
@@ -431,6 +447,30 @@ export function Converter() {
           >
             {error}
           </div>
+          {/* The native pipeline is new; ffmpeg.wasm has converted these files
+              for years. When the new one fails on a device or a rip we cannot
+              reproduce, the old one is right there — so offer it at the only
+              moment it is useful, rather than making everyone choose an engine
+              up front. Not offered when ffmpeg.wasm is what just failed, nor
+              for a bad input that would fail identically either way. */}
+          {failedPipeline === "webcodecs" && lastRun && classifyError(error) !== "bad_input" && (
+            <div className="flex flex-col items-center gap-sm">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  track("pipeline_retry_used", { from: "webcodecs", to: "ffmpeg", resolution });
+                  void run(lastRun, "ffmpeg");
+                }}
+              >
+                Try the original converter
+              </Button>
+              <p className="text-center text-sm text-text-muted">
+                Slower, and it downloads about 30 MB, but it has been converting these files for
+                years.
+              </p>
+            </div>
+          )}
           <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
         </div>
       )}

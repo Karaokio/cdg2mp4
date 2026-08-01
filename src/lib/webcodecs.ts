@@ -69,7 +69,11 @@ export function cancelNativeConversion(): void {
 export function convertCdgToMp4Native(
   cdg: Uint8Array,
   mp3: Uint8Array,
-  opts: { size?: string; onProgress?: ProgressFn } = {}
+  opts: {
+    size?: string;
+    onProgress?: ProgressFn;
+    onAudioCodec?: (codec: "aac" | "mp3") => void;
+  } = {}
 ): Promise<Uint8Array> {
   if (active) {
     return Promise.reject(
@@ -101,6 +105,8 @@ export function convertCdgToMp4Native(
     worker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
       if (data.type === "progress") {
         opts.onProgress?.(Math.min(Math.max(data.ratio, 0), 1));
+      } else if (data.type === "audio-codec") {
+        opts.onAudioCodec?.(data.codec);
       } else if (data.type === "done") {
         finish(() => resolve(new Uint8Array(data.buffer)));
       } else {

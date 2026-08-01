@@ -18,6 +18,7 @@ export type WorkerRequest = {
 
 export type WorkerResponse =
   | { type: "progress"; ratio: number }
+  | { type: "audio-codec"; codec: "aac" | "mp3" }
   | { type: "done"; buffer: ArrayBuffer }
   | { type: "error"; message: string; name: string };
 
@@ -28,8 +29,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const { cdg, mp3, size } = event.data;
   try {
     // Report at most once per output frame; the main thread throttles paints.
-    const buffer = await encodeCdgToMp4(cdg, mp3, size, (ratio) =>
-      post({ type: "progress", ratio })
+    const buffer = await encodeCdgToMp4(
+      cdg,
+      mp3,
+      size,
+      (ratio) => post({ type: "progress", ratio }),
+      (codec) => post({ type: "audio-codec", codec })
     );
     post({ type: "done", buffer }, [buffer]);
   } catch (err) {

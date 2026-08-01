@@ -26,7 +26,8 @@ analytics to improve the tool, see [Privacy](#privacy).)
   Nothing to download, and no wasm engine involved, so it also runs on CPUs without
   SSE4.1 where the wasm core cannot compile at all.
 - **ffmpeg.wasm** fallback, for browsers without `VideoEncoder` or without an H.264
-  encoder config the device accepts. Single-thread `@ffmpeg/core`, copied into
+  encoder config the device accepts, and one click away on the error screen if a native
+  conversion fails anyway. Single-thread `@ffmpeg/core`, copied into
   `public/ffmpeg/` at build time and served same-origin (offline-capable). Single-thread
   is deliberate: the multi-thread core deadlocks at x264 init, and single-thread needs no
   COOP/COEP cross-origin-isolation headers, which keeps deployment trivial.
