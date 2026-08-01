@@ -27,6 +27,15 @@ export default tseslint.config(
     },
   },
   {
+    // Static scripts served as-is from public/ and loaded by index.html.
+    files: ["public/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "script",
+      globals: globals.browser,
+    },
+  },
+  {
     // Node-side files: build config, scripts, e2e tests.
     files: ["**/*.config.{ts,js,mjs}", "scripts/**", "e2e/**"],
     languageOptions: { globals: globals.node },

@@ -5,4 +5,6 @@
 try {
   if (localStorage.getItem("karaokio-theme") === "dark")
     document.documentElement.dataset.theme = "dark";
-} catch (e) {}
+} catch {
+  // Storage can be blocked (private mode, cookie settings); keep the light default.
+}
