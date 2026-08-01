@@ -170,3 +170,10 @@ coverage/
 playwright-report/
 test-results/
 .playwright/
+
+# Unpublished blog and social drafts. They live in docs/ so they are easy to
+# work on, but they are not documentation: they carry editor notes, numbers
+# flagged for rechecking before publication, and copy that has not been
+# reviewed. Matched by pattern so the next draft is covered automatically.
+docs/blog-*.md
+docs/social-*.md
