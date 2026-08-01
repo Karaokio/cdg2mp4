@@ -170,3 +170,6 @@ coverage/
 playwright-report/
 test-results/
 .playwright/
+
+# Drafts kept out of the repo until they are published.
+docs/blog-webcodecs.md
