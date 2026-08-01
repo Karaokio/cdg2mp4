@@ -415,6 +415,16 @@ export function Converter() {
             controls
             autoPlay
             loop
+            // Safari blocks autoplay of anything with an audio track, and will not
+            // decode a frame it was never asked to display, so the player sits grey
+            // until the user hits play. Seeking once metadata is in forces the paint.
+            // A `#t=0.001` fragment on the src is the usual trick and does nothing
+            // here, since Safari ignores media fragments on blob: URLs.
+            preload="auto"
+            onLoadedMetadata={(event) => {
+              const video = event.currentTarget;
+              if (video.currentTime === 0) video.currentTime = 0.001;
+            }}
             aria-label={`Converted karaoke video: ${result.name}`}
             className="w-full rounded-lg shadow-medium"
           />

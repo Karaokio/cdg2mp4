@@ -52,4 +52,41 @@ describe("canUseWebCodecs", () => {
     };
     await expect(canUseWebCodecs("1440x1080")).resolves.toBe(false);
   });
+
+  // Safari has no "quantizer" bitrate mode, and rejects the config with a
+  // TypeError rather than reporting it unsupported. That throw used to escape
+  // mediabunny's candidate loop before the bitrate config Safari does accept was
+  // tried, so every Safari user fell through to ffmpeg.wasm.
+  it("is true on a browser that throws on bitrateMode quantizer but encodes H.264", async () => {
+    const asked: (string | undefined)[] = [];
+    (globalThis as Record<string, unknown>).OffscreenCanvas = class {};
+    (globalThis as Record<string, unknown>).VideoEncoder = {
+      isConfigSupported: (config: VideoEncoderConfig) => {
+        asked.push(config.bitrateMode);
+        if (config.bitrateMode === "quantizer") throw new TypeError("Type error");
+        return Promise.resolve({ supported: true, config });
+      },
+    };
+    await expect(canUseWebCodecs("1920x1080")).resolves.toBe(true);
+    // Asked once about the quantizer (the probe) and never again: the Quality
+    // that follows must not carry one, or the throw comes back.
+    expect(asked.filter((mode) => mode === "quantizer")).toHaveLength(1);
+    expect(asked.at(-1)).toBe("variable");
+  });
+
+  it("still offers Chrome the quantizer config first, then falls back to the bitrate", async () => {
+    const asked: (string | undefined)[] = [];
+    (globalThis as Record<string, unknown>).OffscreenCanvas = class {};
+    (globalThis as Record<string, unknown>).VideoEncoder = {
+      // Chrome 149: the enum exists, AVC just does not accept it yet.
+      isConfigSupported: (config: VideoEncoderConfig) => {
+        asked.push(config.bitrateMode);
+        return Promise.resolve({ supported: config.bitrateMode !== "quantizer", config });
+      },
+    };
+    await expect(canUseWebCodecs("960x720")).resolves.toBe(true);
+    // The probe plus the real candidate: unchanged from before the Safari fix,
+    // so a Chrome that ships AVC quantizer support still picks it up for free.
+    expect(asked).toEqual(["quantizer", "quantizer", "variable"]);
+  });
 });
