@@ -85,6 +85,7 @@ the ones who convert.
   retry might clear. `encoder_error` and `bad_audio` come from the native pipeline.
 - `conversion_cancelled` { input_type, resolution, pipeline, stage, progress_pct,
   duration_ms }
+- `credits_clicked` when someone opens CREDITS.md from the footer.
 - `pipeline_retry_used` { from, to, resolution } when a user takes the "Try the original
   converter" offer after a native failure. Watch this alongside `conversion_failed`: it is
   the count of people the native pipeline actually let down.

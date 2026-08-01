@@ -58,7 +58,12 @@ export default function App() {
           {/* Name whatever is actually converting on this device. Most visitors
               never touch ffmpeg now, and crediting it to them would be wrong;
               the ones still on it deserve to know why theirs is the slow path.
-              Neutral until the probe resolves, so neither name flashes. */}
+              Neutral until the probe resolves, so neither name flashes.
+
+              WebCodecs is the browser's own API, so on the native path the
+              people to credit are the ones whose libraries we actually ship:
+              cdgraphics renders the graphics, mediabunny muxes the MP4. Full
+              list and licences in CREDITS.md, linked below. */}
           <p>
             Runs entirely in your browser · works offline
             {pipeline === "webcodecs" && (
@@ -71,6 +76,24 @@ export default function App() {
                   rel="noreferrer"
                 >
                   WebCodecs
+                </a>
+                {", "}
+                <a
+                  className="text-brand-label underline"
+                  href="https://github.com/bhj/cdgraphics"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  cdgraphics
+                </a>
+                {" and "}
+                <a
+                  className="text-brand-label underline"
+                  href="https://github.com/Vanilagy/mediabunny"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  mediabunny
                 </a>
               </>
             )}
@@ -106,6 +129,17 @@ export default function App() {
               rel="noreferrer"
             >
               Privacy
+            </a>
+            {/* Not decoration: the ffmpeg core is GPL and mediabunny is MPL,
+                and both require telling people so and pointing at the source. */}
+            <a
+              className="text-caption text-text-muted underline-offset-2 transition-colors hover:text-brand hover:underline"
+              href="https://github.com/Karaokio/cdg2mp4/blob/main/CREDITS.md"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => track("credits_clicked")}
+            >
+              Credits
             </a>
           </div>
           <p className="text-caption text-text-muted">

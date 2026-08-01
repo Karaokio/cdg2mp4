@@ -187,6 +187,24 @@ test.describe("conversion pipelines", () => {
     await expect(page.locator("footer")).toContainText(/powered by ffmpeg/i);
   });
 
+  // Attribution is an obligation here, not decoration: the ffmpeg core is GPL
+  // and mediabunny is MPL, and both require telling people so and pointing at
+  // the source. The native path also ships two libraries by name, and crediting
+  // only the browser API would leave their authors out.
+  test("credits the libraries it ships and links the licences", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: /^credits$/i })).toHaveAttribute(
+      "href",
+      /CREDITS\.md$/
+    );
+
+    if (await nativeAvailable(page)) {
+      const footer = page.locator("footer");
+      await expect(footer.getByRole("link", { name: "cdgraphics" })).toBeVisible();
+      await expect(footer.getByRole("link", { name: "mediabunny" })).toBeVisible();
+    }
+  });
+
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {
     test.skip(!(await nativeAvailable(page)), "this browser does need the wasm core");
     await page.goto("/");
