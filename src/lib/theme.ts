@@ -1,6 +1,6 @@
 export type Theme = "light" | "dark";
 
-/** Same key the pre-paint script in index.html reads. */
+/** Same key the pre-paint script in public/theme-init.js reads. */
 export const THEME_STORAGE_KEY = "karaokio-theme";
 
 /** Saved choice wins; new users get light. */
