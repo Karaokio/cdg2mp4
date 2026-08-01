@@ -246,12 +246,9 @@ test.describe("conversion pipelines", () => {
     const [cover] = (await input.getMetadataTags()).images ?? [];
     expect(cover, "the MP4 carries cover art").toBeDefined();
     expect(cover.kind).toBe("coverFront");
-    // JPEG, not PNG: Safari never auto-hides its media controls on a file with a
-    // PNG cover, and the controls overlay tints the video for as long as it
-    // plays. See renderTitleFrame.
-    expect(cover.mimeType).toBe("image/jpeg");
-    // A real JPEG, not an empty placeholder.
-    expect(Buffer.from(cover.data.subarray(0, 3)).toString("hex")).toBe("ffd8ff");
+    expect(cover.mimeType).toBe("image/png");
+    // A real PNG, not an empty placeholder.
+    expect(Buffer.from(cover.data.subarray(0, 8)).toString("hex")).toBe("89504e470d0a1a0a");
   });
 
   // mediabunny writes tkhd alternate_group = track id, which puts the video
