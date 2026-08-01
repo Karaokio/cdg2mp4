@@ -26,6 +26,7 @@
  */
 
 import CDGraphics from "cdgraphics";
+import { log } from "../log";
 import {
   ALL_FORMATS,
   AudioSampleSink,
@@ -245,6 +246,13 @@ export async function encodeCdgToMp4(
     await audio.run();
 
     const frames = Math.max(1, Math.ceil(audio.duration * FPS));
+    // The CDG is often shorter than the audio; the difference is the stretch
+    // that holds the last graphic, so it is worth seeing both numbers.
+    const cdgSeconds = cdg.byteLength / (PACKETS_PER_SEC * 24);
+    log(
+      `${frames} frames at ${FPS}fps — ${audio.duration.toFixed(1)}s of audio, ` +
+        `${cdgSeconds.toFixed(1)}s of graphics`
+    );
 
     // Constant frame rate: one sample per 1/30s, the same as the ffmpeg path's
     // `-r 30`. Submitting only changed frames with longer durations was tried

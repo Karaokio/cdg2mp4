@@ -16,6 +16,7 @@ import { canEncodeVideo } from "mediabunny";
 import { parseSize, videoQuality } from "./webcodecs/encode";
 import type { WorkerRequest, WorkerResponse } from "./webcodecs/worker";
 import type { ProgressFn } from "./ffmpeg";
+import { log, logError, mb, secs } from "./log";
 
 let supportCache = new Map<string, boolean>();
 
@@ -59,6 +60,7 @@ let active: { worker: Worker; cancel: () => void } | null = null;
  * conversion rejects with "Conversion cancelled." No-op when idle.
  */
 export function cancelNativeConversion(): void {
+  if (active) log("cancelled — terminating the encoder worker");
   active?.cancel();
 }
 
@@ -80,6 +82,10 @@ export function convertCdgToMp4Native(
       new Error("A conversion is already in progress. Please wait for it to finish.")
     );
   }
+
+  const size = opts.size ?? "1440x1080";
+  log(`encoding ${size} H.264 in a worker`);
+  const startedAt = Date.now();
 
   const worker = new Worker(new URL("./webcodecs/worker.ts", import.meta.url), {
     type: "module",
@@ -106,10 +112,18 @@ export function convertCdgToMp4Native(
       if (data.type === "progress") {
         opts.onProgress?.(Math.min(Math.max(data.ratio, 0), 1));
       } else if (data.type === "audio-codec") {
+        log(
+          data.codec === "aac"
+            ? "audio: re-encoding the MP3 to AAC"
+            : "audio: no AAC encoder here, remuxing the MP3 as-is"
+        );
         opts.onAudioCodec?.(data.codec);
       } else if (data.type === "done") {
+        const bytes = data.buffer.byteLength;
+        log(`encoded ${mb(bytes)} in ${secs(Date.now() - startedAt)}`);
         finish(() => resolve(new Uint8Array(data.buffer)));
       } else {
+        logError("the encoder worker failed", new Error(`${data.name}: ${data.message}`));
         finish(() => reject(new Error(data.message, { cause: new Error(data.name) })));
       }
     };
@@ -130,7 +144,7 @@ export function convertCdgToMp4Native(
     // caller has no use for them afterwards (the ffmpeg path detaches them
     // too). Deduped, since transferring one buffer twice is a DataCloneError
     // and the two views could in principle share a backing buffer.
-    const request: WorkerRequest = { cdg, mp3, size: opts.size ?? "1440x1080" };
+    const request: WorkerRequest = { cdg, mp3, size };
     const buffers = [...new Set([cdg.buffer, mp3.buffer])] as ArrayBuffer[];
     worker.postMessage(request, buffers);
   });

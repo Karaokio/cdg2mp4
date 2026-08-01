@@ -6,6 +6,7 @@ import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/fo
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
+import { log, logError, mb, secs } from "@/lib/log";
 import { SIMD_UNSUPPORTED_MESSAGE } from "@/lib/wasmFeatures";
 import { FeedbackPrompt } from "@/components/Feedback";
 import { FfmpegCommand, type CommandNames } from "@/components/FfmpegCommand";
@@ -141,6 +142,10 @@ export function Converter() {
             ? extractPairFromZip(await read(input.zip))
             : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
+        log(
+          `converting ${input.type === "zip" ? input.zip.name : input.cdg.name} ` +
+            `at ${resolution} (${size})`
+        );
         // Measure now: the ffmpeg path transfers pair.cdg's buffer to its
         // worker, detaching it, so byteLength reads 0 after the conversion.
         const songSeconds = cdgSongSeconds(pair.cdg.byteLength);
@@ -172,7 +177,13 @@ export function Converter() {
           },
         });
 
+        const elapsed = Date.now() - t0;
         const blob = new Blob([mp4 as BlobPart], { type: "video/mp4" });
+        log(
+          `done in ${secs(elapsed)} — ${mb(blob.size)}, ` +
+            `${(songSeconds / (elapsed / 1000)).toFixed(1)}x realtime`,
+          { pipeline, resolution, audio: audioCodec }
+        );
         const url = URL.createObjectURL(blob);
         setResult({ url, name: `${pair.baseName}.mp4` });
         setProgress(1);
@@ -194,6 +205,7 @@ export function Converter() {
           // User-requested stop, not a failure: back to the empty dropzone.
           setStatus("idle");
           setPhase("");
+          log(`cancelled after ${secs(Date.now() - t0)}`);
           trackConversionCancelled({
             input_type: inputType,
             resolution,
@@ -206,6 +218,7 @@ export function Converter() {
           return;
         }
         const message = e instanceof Error ? e.message : String(e);
+        logError(`failed during "${stage}" on ${pipeline}: ${message}`, (e as Error)?.cause);
         setError(message);
         setStatus("error");
         setFailedPipeline(pipeline);
@@ -459,6 +472,7 @@ export function Converter() {
                 variant="secondary"
                 type="button"
                 onClick={() => {
+                  log("retrying on ffmpeg.wasm at the user's request");
                   track("pipeline_retry_used", { from: "webcodecs", to: "ffmpeg", resolution });
                   void run(lastRun, "ffmpeg");
                 }}

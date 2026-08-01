@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { pipelineOverride, selectPipeline } from "./convert";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { pipelineOverride, selectPipeline, resetPipelineAnnouncement } from "./convert";
 import { resetWebCodecsSupportCache } from "./webcodecs";
 
 const setSearch = (search: string) => {
@@ -9,6 +9,8 @@ const setSearch = (search: string) => {
 afterEach(() => {
   setSearch("");
   resetWebCodecsSupportCache();
+  resetPipelineAnnouncement();
+  vi.restoreAllMocks();
 });
 
 describe("pipelineOverride", () => {
@@ -37,5 +39,24 @@ describe("selectPipeline", () => {
   it("honours the override even where detection would say otherwise", async () => {
     setSearch("?pipeline=webcodecs");
     expect(await selectPipeline("1440x1080")).toBe("webcodecs");
+  });
+});
+
+describe("pipeline announcement", () => {
+  // The dropzone copy, the offline pill and the conversion itself all ask which
+  // pipeline is in play. Announcing per call would print the same line three
+  // times before anyone drops a file.
+  it("logs a given decision once, however many callers ask", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await selectPipeline("1440x1080");
+    await selectPipeline("1440x1080");
+    await selectPipeline("960x720");
+    expect(info).toHaveBeenCalledTimes(1);
+  });
+
+  it("says which pipeline, and why", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await selectPipeline("1440x1080");
+    expect(info.mock.calls[0][0]).toMatch(/ffmpeg\.wasm/);
   });
 });

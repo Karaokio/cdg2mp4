@@ -19,6 +19,8 @@
 
 import { convertCdgToMp4, cancelConversion, type LogFn, type ProgressFn } from "./ffmpeg";
 import { canUseWebCodecs, cancelNativeConversion, convertCdgToMp4Native } from "./webcodecs";
+import { hasWasmSimd } from "./wasmFeatures";
+import { log } from "./log";
 
 export type Pipeline = "webcodecs" | "ffmpeg";
 
@@ -29,11 +31,40 @@ export function pipelineOverride(): Pipeline | null {
   return value === "webcodecs" || value === "ffmpeg" ? value : null;
 }
 
+// selectPipeline is called by anything that needs to know the routing, not just
+// a conversion: the dropzone copy, the offline pill, the run itself. They would
+// each log the same decision, so say it once per decision instead.
+let announced: string | null = null;
+const announce = (message: string) => {
+  if (announced === message) return;
+  announced = message;
+  log(message);
+};
+
+/** Test seam: allow the next decision to be announced again. */
+export function resetPipelineAnnouncement(): void {
+  announced = null;
+}
+
 /** Which pipeline a conversion at this output size will use. Never throws. */
 export async function selectPipeline(size: string): Promise<Pipeline> {
   const forced = pipelineOverride();
-  if (forced) return forced;
-  return (await canUseWebCodecs(size)) ? "webcodecs" : "ffmpeg";
+  if (forced) {
+    announce(`pipeline: ${forced} (forced by ?pipeline=)`);
+    return forced;
+  }
+  if (await canUseWebCodecs(size)) {
+    announce("pipeline: webcodecs — native H.264 encoder, nothing to download");
+    return "webcodecs";
+  }
+  // Say which of the two reasons it is, since they lead somewhere different:
+  // one is a slow conversion, the other is no conversion at all.
+  announce(
+    hasWasmSimd()
+      ? "pipeline: ffmpeg.wasm — no usable H.264 encoder here, falling back"
+      : "pipeline: ffmpeg.wasm — no H.264 encoder and no wasm SIMD, this device cannot convert"
+  );
+  return "ffmpeg";
 }
 
 /** Stop whichever conversion is in flight. */

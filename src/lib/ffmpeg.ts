@@ -2,6 +2,7 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "./coreUrls";
 import { hasWasmSimd, isSimdCompileError, SIMD_UNSUPPORTED_MESSAGE } from "./wasmFeatures";
+import { log, secs } from "./log";
 
 // The single-thread core is staged into public/ffmpeg/<version>/ (see
 // scripts/copy-ffmpeg-core.mjs) so it is served same-origin and works offline.
@@ -55,6 +56,8 @@ async function loadWasmBlobURL(): Promise<string> {
 /** Lazily create and load a single shared FFmpeg instance. */
 export function loadFFmpeg(): Promise<FFmpeg> {
   if (loadPromise) return loadPromise;
+  const startedAt = Date.now();
+  log(`loading the ffmpeg core (~31 MB, then cached for offline use)`);
   loadPromise = (async () => {
     const instance = new FFmpeg();
     current = instance;
@@ -63,6 +66,7 @@ export function loadFFmpeg(): Promise<FFmpeg> {
       loadWasmBlobURL(),
     ]);
     await instance.load({ coreURL, wasmURL });
+    log(`ffmpeg core ready in ${secs(Date.now() - startedAt)}`);
     return instance;
   })().catch((err) => {
     // Never cache a rejected load (e.g. offline on first run); allow a retry.
@@ -136,6 +140,7 @@ export async function convertCdgToMp4(
     await instance.writeFile("in.cdg", cdg);
     await instance.writeFile("in.mp3", mp3);
 
+    log(`running ffmpeg: scale to ${size}, libx264 veryfast, aac`);
     const code = await instance.exec([
       "-i",
       "in.cdg",

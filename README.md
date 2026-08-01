@@ -116,6 +116,7 @@ src/
     Converter.tsx   the dropzone → convert → preview/download flow
   lib/
     convert.ts      picks a pipeline (?pipeline= forces one) and runs it
+    log.ts          the console trace of a conversion (see below)
     webcodecs.ts    native pipeline: capability detection + worker lifecycle
     webcodecs/
       encode.ts     the native pipeline itself (cdgraphics + WebCodecs + mediabunny)
@@ -131,6 +132,27 @@ scripts/
 test/files/         self-generated, copyright-free sample.{cdg,mp3,zip} fixtures,
                     plus sample-key.cdg (transparent background, see the spec)
 ```
+
+## Watching a conversion
+
+Open the browser console. Every conversion prints a short trace: which pipeline
+was chosen and why, the frame count against the audio and graphics lengths, the
+audio codec, and a final line with size and realtime factor.
+
+```
+[cdg2mp4] pipeline: webcodecs — native H.264 encoder, nothing to download
+[cdg2mp4] converting sample.zip at 1080p (1440x1080)
+[cdg2mp4] encoding 1440x1080 H.264 in a worker
+[cdg2mp4] audio: re-encoding the MP3 to AAC
+[cdg2mp4] 242 frames at 30fps — 8.0s of audio, 8.0s of graphics
+[cdg2mp4] encoded 0.1 MB in 0.7s
+[cdg2mp4] done in 0.7s — 0.1 MB, 11.2x realtime
+```
+
+It is always on rather than behind a flag, because it is only useful if it is
+already there when something goes wrong. That only works if it stays quiet, so
+the budget is a handful of lines per conversion: nothing per frame, nothing per
+packet. Filenames appear; file contents never do.
 
 ## Test fixtures
 
