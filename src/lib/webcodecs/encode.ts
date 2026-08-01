@@ -85,11 +85,21 @@ export function renderTimeForFrame(index: number, fps = FPS): number {
  * `bitrateMode: "quantizer"` for AVC, so mediabunny falls back to the bitrate
  * below, and it will pick the quantizer up for free whenever Chrome ships it.
  *
- * The bitrate is therefore a ceiling rather than a target. VBR on this content
- * lands far under it (0.36 Mbps of a 1.40 Mbps allowance on a 1080p rip), and
- * lowering it does not shrink the file — measured 8.0 MB at 0.03 bits/px and
- * 8.4 MB at 0.01, because rate control is not the binding constraint.
- * KEY_FRAME_INTERVAL is.
+ * The bitrate is therefore a ceiling rather than a target, and VBR on this
+ * content lands well under it (0.27 Mbps of a 1.40 Mbps allowance on a 1080p
+ * rip). Lowering it buys nothing until it starts costing quality. Measured on a
+ * 188s rip, against a lossless render of the same CDG:
+ *
+ *   bits/px   size    SSIM
+ *   0.03      6.0 MB  0.9984   <- here
+ *   0.01      6.2 MB  0.9971
+ *   0.005     6.0 MB  0.9954
+ *   0.0025    4.7 MB  0.9904
+ *   ffmpeg    4.7 MB  0.9966   (libx264 CRF 23, for reference)
+ *
+ * So this sits slightly above the ffmpeg path's quality for about 1.3x its
+ * bytes. x264's rate control is simply better than the browser's at this
+ * quality; matching its size means giving up measurably more than it does.
  */
 export function videoQuality(width: number, height: number): Quality {
   return new Quality({
@@ -103,11 +113,11 @@ export function videoQuality(width: number, height: number): Quality {
  * Seconds between keyframes: x264's own default of 250 frames, which is what
  * the ffmpeg path already produces.
  *
- * This is the single biggest lever on output size here. CDG is nearly static,
- * so inter frames cost almost nothing and the file is mostly keyframes; on a
- * 188s rip at 1080p, mediabunny's 2s default produced 15.9 MB against 8.0 MB
- * at 250 frames, for an SSIM of 0.996 between them. Seeking granularity is the
- * cost, and 8.3s is what every ffmpeg-produced karaoke MP4 already has.
+ * The largest lever on output size that costs nothing: on a 188s rip at 1080p,
+ * mediabunny's 2s default produced 8.2 MB against 6.1 MB at 250 frames, with
+ * the longer interval scoring *better* against a lossless render (0.9984 vs
+ * 0.9982 SSIM). Seeking granularity is the only cost, and 8.3s is what every
+ * ffmpeg-produced karaoke MP4 already has.
  */
 const KEY_FRAME_INTERVAL = 250 / FPS;
 
@@ -207,6 +217,12 @@ export async function encodeCdgToMp4(
   const ctx = canvas.getContext("2d");
   if (!sourceCtx || !ctx) throw new Error("Could not create a drawing canvas.");
   ctx.imageSmoothingEnabled = false;
+  // Replace the destination rather than blending into it. A CD+G title can
+  // declare a transparent background, and drawImage's default source-over would
+  // then composite every frame on top of the one before, accumulating every
+  // lyric ever drawn into a smear. ffmpeg's decoder drops the alpha and keeps
+  // the RGB, and "copy" is how you say that here.
+  ctx.globalCompositeOperation = "copy";
 
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
   const videoSource = new CanvasSource(canvas, {
@@ -222,6 +238,12 @@ export async function encodeCdgToMp4(
     await audio.run();
 
     const frames = Math.max(1, Math.ceil(audio.duration * FPS));
+
+    // Constant frame rate: one sample per 1/30s, the same as the ffmpeg path's
+    // `-r 30`. Submitting only changed frames with longer durations was tried
+    // and dropped: a real rip changes ~70% of its frames during lyrics, so it
+    // saved 0.1 MB of 6.1 MB and 13% of the encode time, which is not worth
+    // handing a variable-rate file to whatever TV or bar player this ends up on.
     for (let i = 0; i < frames; i++) {
       const frame = graphics.render(renderTimeForFrame(i));
       // Past the end of the CDG stream `render` keeps returning the last state

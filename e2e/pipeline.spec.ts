@@ -2,6 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
 const sampleZip = fileURLToPath(new URL("../test/files/sample.zip", import.meta.url));
+const keyedCdg = fileURLToPath(new URL("../test/files/sample-key.cdg", import.meta.url));
+const sampleMp3 = fileURLToPath(new URL("../test/files/sample.mp3", import.meta.url));
 
 /** Run a conversion and return the output MP4's size plus the video's metadata. */
 async function convert(page: Page, url: string) {
@@ -63,6 +65,52 @@ test.describe("conversion pipelines", () => {
     expect(supported).toBe(true);
     // The wasm-only copy is the tell: it is rendered only when ffmpeg is chosen.
     await expect(page.getByText(/while the converter downloads/i)).toHaveCount(0);
+  });
+
+  // A CD+G title can declare its background color transparent. Rendering it by
+  // drawing each frame onto the previous one then never erases anything those
+  // transparent pixels cover, so every mark ever drawn accumulates. Real rips
+  // smear their lyrics; sample-key.cdg makes it unmissable by sweeping a single
+  // white block across the screen and erasing it to the transparent color, so a
+  // compositing renderer paints a trail the full width instead.
+  test("erases through a transparent background instead of compositing over it", async ({
+    page,
+  }) => {
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles([keyedCdg, sampleMp3]);
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 90_000 });
+
+    // Count white pixels across the row the block sweeps along, near the end of
+    // the sweep. One block is ~2/50 of the row's width; a trail is most of it.
+    const whiteFraction = await video.evaluate(async (el: HTMLVideoElement) => {
+      el.pause();
+      await new Promise((r) => {
+        if (el.readyState >= 2) return r(null);
+        el.addEventListener("loadeddata", r, { once: true });
+      });
+      el.currentTime = 6.5;
+      await new Promise((r) => el.addEventListener("seeked", r, { once: true }));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = el.videoWidth;
+      canvas.height = el.videoHeight;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(el, 0, 0);
+      // Rows 8-9 of 18 tile-rows, sampled mid-band.
+      const y = Math.round(canvas.height * (8.5 / 18));
+      const { data } = ctx.getImageData(0, y, canvas.width, 1);
+      let white = 0;
+      for (let x = 0; x < canvas.width; x++) {
+        const [r, g, b] = [data[x * 4], data[x * 4 + 1], data[x * 4 + 2]];
+        if (r > 200 && g > 200 && b > 200) white++;
+      }
+      return white / canvas.width;
+    });
+
+    // The sweeping block covers about 4% of the row. Compositing would leave a
+    // trail over most of it, so anything past a quarter is the bug.
+    expect(whiteFraction).toBeLessThan(0.25);
   });
 
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {

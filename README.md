@@ -127,12 +127,13 @@ src/
 scripts/
   copy-ffmpeg-core.mjs   copies @ffmpeg/core into public/ffmpeg/ (pre dev/build)
   make-sample-cdg.py     generates the copyright-free CDG test card
-test/files/         self-generated, copyright-free sample.{cdg,mp3,zip} fixtures
+test/files/         self-generated, copyright-free sample.{cdg,mp3,zip} fixtures,
+                    plus sample-key.cdg (transparent background, see the spec)
 ```
 
 ## Test fixtures
 
-`test/files/sample.*` are generated from scratch and contain no copyrighted
+`test/files/sample*` are generated from scratch and contain no copyrighted
 material: a hand-authored CDG color-bar test card (`scripts/make-sample-cdg.py`)
 paired with a synthetic tone. Regenerate with:
 

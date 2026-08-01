@@ -84,21 +84,31 @@ Behavior is matched to the ffmpeg command it replaces:
   Chrome 149 still rejects `bitrateMode: "quantizer"` for AVC, so today the bitrate is
   what runs; the quantizer takes over for free when Chrome ships it.
 - Keyframes every 250 frames, x264's default and what the ffmpeg path already produces.
-  This is the dominant lever on output size for near-static content: mediabunny's 2s
-  default cost 15.9 MB against 8.0 MB at 250 frames on the same rip, at an SSIM of 0.996
-  between the two. Rate control is not the binding constraint, and lowering the bitrate
-  below the current ceiling does not shrink the file.
+  The largest lever on output size that costs nothing: mediabunny's 2s default produced
+  8.2 MB against 6.1 MB at 250 frames on the same rip, with the longer interval scoring
+  marginally *better* against a lossless render.
+- Frames are drawn with `globalCompositeOperation = "copy"`. A CD+G title can declare its
+  background color transparent, and `drawImage`'s default source-over then composites every
+  frame onto the one before, so nothing a transparent pixel covers is ever erased and every
+  mark accumulates. `test/files/sample-key.cdg` and the e2e test that reads it exist to
+  keep this fixed.
+- Constant frame rate. Submitting only changed frames with longer durations was measured
+  and rejected: a real rip changes ~70% of its frames during lyrics, so it saved 0.1 MB of
+  6.1 MB and 13% of encode time, which does not justify handing a variable-rate file to an
+  unknown TV or bar player.
 
-**Measured** on a real 188s rip at 1080p (`TRKD1502`, Chromium 149, M-series laptop):
+**Measured** on a real 188s rip at 1080p (`TRKD1502`, Chromium 149, M-series laptop).
+SSIM is against a lossless render of the same CDG:
 
-| | encode | output | frames matching `ffmpeg -vf fps=30` |
-|---|---|---|---|
-| Native | 13.1s (14x realtime) | 8.0 MB | 97% pixel-identical, rest under 0.1% of pixels |
-| ffmpeg (native binary, 8 cores) | 7.6s | 4.7 MB | reference |
+| | encode | output | SSIM | frames matching `ffmpeg -vf fps=30` |
+|---|---|---|---|---|
+| Native | 14.1s (13x realtime) | 6.1 MB | 0.9984 | 97% pixel-identical, rest under 0.1% of pixels |
+| ffmpeg (native binary, 8 cores) | 7.6s | 4.7 MB | 0.9966 | reference |
 
-x264's CRF still beats a bitrate-capped VBR encoder on flat art, so the native output is
-about 1.7x larger. In the browser, where the comparison is against ffmpeg.wasm rather than
-a native binary, the native path is several times faster.
+The native path is slightly the higher quality of the two, for about 1.3x the bytes:
+x264's rate control is better than the browser's, and matching its size means giving up
+measurably more quality than it does. In the browser the comparison is against
+ffmpeg.wasm rather than a native binary, where the native path is several times faster.
 
 ### 4b. Fallback engine (ffmpeg.wasm)
 
