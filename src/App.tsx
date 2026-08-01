@@ -68,7 +68,8 @@ export default function App() {
             Runs entirely in your browser · works offline
             {pipeline === "webcodecs" && (
               <>
-                {" · powered by "}
+                <br />
+                {"powered by "}
                 <a
                   className="text-brand-label underline"
                   href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder"
@@ -99,7 +100,8 @@ export default function App() {
             )}
             {pipeline === "ffmpeg" && (
               <>
-                {" · powered by "}
+                <br />
+                {"powered by "}
                 <a
                   className="text-brand-label underline"
                   href="https://ffmpegwasm.netlify.app/"
