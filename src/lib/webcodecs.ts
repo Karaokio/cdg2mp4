@@ -85,6 +85,9 @@ export function convertCdgToMp4Native(
     size?: string;
     onProgress?: ProgressFn;
     onAudioCodec?: (codec: "aac" | "mp3") => void;
+    /** The rip's title screen, when it has one. Never fires on a rip that opens
+     * cold, so the caller must cope with never hearing from it. */
+    onPoster?: (poster: Blob) => void;
   } = {}
 ): Promise<Uint8Array> {
   if (active) {
@@ -131,6 +134,9 @@ export function convertCdgToMp4Native(
       } else if (data.type === "done") {
         const bytes = data.buffer.byteLength;
         log(`encoded ${mb(bytes)} in ${secs(Date.now() - startedAt)}`);
+        if (data.poster) {
+          opts.onPoster?.(new Blob([data.poster], { type: data.posterType }));
+        }
         finish(() => resolve(new Uint8Array(data.buffer)));
       } else {
         logError("the encoder worker failed", new Error(`${data.name}: ${data.message}`));
