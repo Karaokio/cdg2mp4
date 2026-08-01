@@ -148,6 +148,9 @@ export function classifyError(message: string): string {
   // the mapping is a safety net for any that slip into the failure path.
   if (/cancelled|FFmpeg\.terminate/i.test(message)) return "cancelled";
   if (/already in progress/i.test(message)) return "busy";
+  // Before load_failed: a SIMD-less device is a permanent hardware limit, not a
+  // load that might succeed on retry, and conflating the two hides it.
+  if (/SIMD support/i.test(message)) return "simd_unsupported";
   if (/load the converter|download the converter|converter core/i.test(message))
     return "load_failed";
   if (/exit code/i.test(message)) return "ffmpeg_error";

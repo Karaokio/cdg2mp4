@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { Converter } from "./Converter";
+import { SIMD_UNSUPPORTED_MESSAGE } from "@/lib/wasmFeatures";
 
 // The conversion itself is covered by ffmpeg.test.ts and e2e; here it just
 // needs to resolve so the pair-completion flow can reach the "done" state.
@@ -86,5 +87,33 @@ describe("Converter cancel", () => {
     expect(cancelConversion).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(container.querySelector("video")).not.toBeInTheDocument();
+  });
+});
+
+describe("Converter local-ffmpeg fallback on failure", () => {
+  const convert = vi.mocked(convertCdgToMp4);
+
+  const failWith = async (message: string) => {
+    convert.mockRejectedValueOnce(new Error(message));
+    const { container } = render(<Converter />);
+    await userEvent.upload(fileInput(container), [file("song.cdg"), file("song.mp3")]);
+    expect(await screen.findByRole("alert")).toHaveTextContent(message.slice(0, 30));
+  };
+
+  it("offers the command after a failure, since a local run is the way forward", async () => {
+    await failWith("The converter failed (ffmpeg exit code 1).");
+    expect(screen.getByText(/prefer the command line/i)).toBeInTheDocument();
+  });
+
+  it("expands the command for a SIMD-less device, where it is the only thing that works", async () => {
+    await failWith(SIMD_UNSUPPORTED_MESSAGE);
+    const details = screen.getByText(/prefer the command line/i).closest("details");
+    expect(details).toHaveProperty("open", true);
+  });
+
+  it("leaves the command collapsed for failures a local run will not fix", async () => {
+    await failWith("The converter failed (ffmpeg exit code 1).");
+    const details = screen.getByText(/prefer the command line/i).closest("details");
+    expect(details).toHaveProperty("open", false);
   });
 });

@@ -1,6 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "./coreUrls";
+import { hasWasmSimd, isSimdCompileError, SIMD_UNSUPPORTED_MESSAGE } from "./wasmFeatures";
 
 // The single-thread core is staged into public/ffmpeg/<version>/ (see
 // scripts/copy-ffmpeg-core.mjs) so it is served same-origin and works offline.
@@ -89,6 +90,14 @@ export async function convertCdgToMp4(
 
   const size = opts.size ?? "1440x1080";
 
+  // Preflight: the core is a SIMD build, so an engine without SIMD can never
+  // compile it. Fail here rather than after a 10MB download that is guaranteed
+  // to be wasted, and say so plainly instead of suggesting a pointless retry.
+  if (!hasWasmSimd()) {
+    busy = false;
+    throw new Error(SIMD_UNSUPPORTED_MESSAGE, { cause: new Error("Wasm SIMD unsupported") });
+  }
+
   let instance: FFmpeg;
   try {
     instance = await loadFFmpeg();
@@ -98,12 +107,14 @@ export async function convertCdgToMp4(
     // browser's network TypeError ("Failed to fetch" / "NetworkError when
     // attempting to fetch resource."); everything else is worker/wasm setup.
     const isDownload = err instanceof Error && /converter core|fetch/i.test(err.message);
-    throw new Error(
-      isDownload
+    // The preflight above catches SIMD-less engines, but an engine can also
+    // validate the probe and still refuse the real core; same message either way.
+    const message = isSimdCompileError(err)
+      ? SIMD_UNSUPPORTED_MESSAGE
+      : isDownload
         ? "Could not download the converter. Check your connection and try again."
-        : "Could not load the converter. Try again, or try a different browser.",
-      { cause: err }
-    );
+        : "Could not load the converter. Try again, or try a different browser.";
+    throw new Error(message, { cause: err });
   }
 
   // A cancel during load may resolve against a half-dead instance; bail out

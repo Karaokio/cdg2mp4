@@ -20,6 +20,7 @@ vi.mock("@ffmpeg/ffmpeg", () => ({
 vi.mock("@ffmpeg/util", () => ({ toBlobURL: vi.fn(async () => "blob:core-js") }));
 
 import { convertCdgToMp4, cancelConversion } from "./ffmpeg";
+import { resetWasmSimdCache } from "./wasmFeatures";
 
 const cdg = new Uint8Array([1]);
 const mp3 = new Uint8Array([2]);
@@ -32,6 +33,7 @@ const wasmResponse = () => ({
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetWasmSimdCache();
   loadMock.mockReset();
   execMock.mockReset();
   terminateMock.mockReset();
@@ -62,6 +64,36 @@ describe("convertCdgToMp4 load failures", () => {
     const err = await convertCdgToMp4(cdg, mp3).catch((e: unknown) => e as Error);
     expect((err as Error).message).toMatch(/load the converter/i);
     expect(((err as Error).cause as Error).message).toBe("worker crashed");
+  });
+
+  it("fails fast with the SIMD message when the engine has no SIMD, without fetching the core", async () => {
+    vi.spyOn(WebAssembly, "validate").mockReturnValue(false);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const err = await convertCdgToMp4(cdg, mp3).catch((e: unknown) => e as Error);
+    expect((err as Error).message).toMatch(/processor is missing the SIMD support/i);
+    // The whole point of the preflight: no 10MB download that cannot be used.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(loadMock).not.toHaveBeenCalled();
+  });
+
+  it("does not stay busy after the SIMD preflight rejects", async () => {
+    vi.spyOn(WebAssembly, "validate").mockReturnValue(false);
+    vi.stubGlobal("fetch", vi.fn());
+    await expect(convertCdgToMp4(cdg, mp3)).rejects.toThrow(/SIMD/i);
+    await expect(convertCdgToMp4(cdg, mp3)).rejects.toThrow(/SIMD/i);
+  });
+
+  it("uses the SIMD message when the probe passes but the real core still refuses v128", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(wasmResponse()));
+    loadMock.mockRejectedValue(
+      new Error(
+        "RuntimeError: Aborted(CompileError: WebAssembly.instantiate(): Compiling function #81 failed: Wasm SIMD unsupported @+70121)"
+      )
+    );
+    const err = await convertCdgToMp4(cdg, mp3).catch((e: unknown) => e as Error);
+    expect((err as Error).message).toMatch(/processor is missing the SIMD support/i);
+    expect(((err as Error).cause as Error).message).toMatch(/SIMD unsupported/);
   });
 
   it("allows a retry after a failed load (does not stay busy or cache the rejection)", async () => {
