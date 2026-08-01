@@ -4,6 +4,8 @@ import { Tooltip } from "@/components/ui";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "@/lib/coreUrls";
 import { track } from "@/lib/analytics";
 import { isConverting, subscribeConverting } from "@/lib/converting";
+import { selectPipeline } from "@/lib/convert";
+import { resolutionToSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // The heavy ffmpeg core is runtime-cached under this name (see vite.config.ts).
@@ -69,6 +71,16 @@ export function OfflineStatus() {
   const [cached, setCached] = React.useState(false);
   const [preparing, setPreparing] = React.useState(false);
   const [devNote, setDevNote] = React.useState(false);
+  // On the native pipeline there is no core to download: the app shell is
+  // precached by the service worker and the conversion needs nothing else, so
+  // the device is already offline-ready. Null until detection resolves.
+  const [native, setNative] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    // Any resolution answers the question; support does not vary between them
+    // in practice, and the pill is not per-resolution.
+    void selectPipeline(resolutionToSize("1080p")).then((p) => setNative(p === "webcodecs"));
+  }, []);
 
   const refresh = React.useCallback(async () => setCached(await isCoreCached()), []);
 
@@ -113,7 +125,7 @@ export function OfflineStatus() {
     return subscribeConverting(apply); // otherwise apply when the conversion ends
   }, [needRefresh, updateServiceWorker]);
 
-  if (!supported) return null;
+  if (!supported || native === null) return null;
 
   const downloadForOffline = async () => {
     // In dev the service worker is off (devOptions.enabled: false in vite.config.ts),
@@ -178,6 +190,21 @@ export function OfflineStatus() {
       <span className={cn(pill, "text-text-muted")}>
         <Dot className="bg-spotlight" pulse />
         Saving for offline…
+      </span>
+    );
+  }
+
+  // Native pipeline, nothing cached: already offline-ready, and offering a
+  // 30 MB download this device will never load would be a lie.
+  if (native && !cached) {
+    return (
+      <span className={cn(pill, "text-text")}>
+        <Tooltip label="This browser converts on its own, so there is nothing to download. It already works with no internet.">
+          <span className="inline-flex items-center gap-sm">
+            <Dot className="bg-success" />
+            <span className="font-medium">Available offline</span>
+          </span>
+        </Tooltip>
       </span>
     );
   }

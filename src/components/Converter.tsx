@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { convertCdgToMp4, cancelConversion } from "@/lib/ffmpeg";
+import { convertPair, cancelActiveConversion, selectPipeline, type Pipeline } from "@/lib/convert";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
@@ -72,10 +72,21 @@ export function Converter() {
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   // Real filenames for the "run it locally" command, once a conversion knows them.
   const [lastNames, setLastNames] = React.useState<CommandNames | undefined>();
+  // Which pipeline the next conversion would use, for the copy below. Null
+  // until detection resolves (a promise, since it probes the H.264 encoder).
+  const [nextPipeline, setNextPipeline] = React.useState<Pipeline | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
   const cancelled = React.useRef(false); // user hit Cancel during this run
   const progressNow = React.useRef(0); // latest progress, for the cancel event
+
+  React.useEffect(() => {
+    let live = true;
+    void selectPipeline(resolutionToSize(resolution)).then((p) => live && setNextPipeline(p));
+    return () => {
+      live = false;
+    };
+  }, [resolution]);
 
   // Revoke the object URL when it's replaced or the component unmounts.
   React.useEffect(() => {
@@ -108,7 +119,11 @@ export function Converter() {
       let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
-      trackConversionStarted({ input_type: inputType, resolution, ...inputNames });
+      // Resolved before the first event so every event of this run — including a
+      // failure during load — carries the pipeline that produced it.
+      const size = resolutionToSize(resolution);
+      const pipeline = await selectPipeline(size);
+      trackConversionStarted({ input_type: inputType, resolution, pipeline, ...inputNames });
       try {
         setPhase("Reading files…");
         const pair =
@@ -116,7 +131,7 @@ export function Converter() {
             ? extractPairFromZip(await read(input.zip))
             : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
-        // Measure now: convertCdgToMp4 transfers pair.cdg's buffer to the ffmpeg
+        // Measure now: the ffmpeg path transfers pair.cdg's buffer to its
         // worker, detaching it, so byteLength reads 0 after the conversion.
         const songSeconds = cdgSongSeconds(pair.cdg.byteLength);
         setLastNames(
@@ -126,9 +141,12 @@ export function Converter() {
         );
 
         stage = "load";
-        setPhase("Loading converter…");
-        const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
-          size: resolutionToSize(resolution),
+        // Only the wasm path has a converter to download; the native one starts
+        // encoding immediately.
+        setPhase(pipeline === "ffmpeg" ? "Loading converter…" : "Converting…");
+        const mp4 = await convertPair(pair.cdg, pair.mp3, {
+          size,
+          pipeline,
           onProgress: (r) => {
             stage = "convert";
             progressNow.current = r;
@@ -149,6 +167,7 @@ export function Converter() {
         trackConversionSucceeded({
           input_type: inputType,
           resolution,
+          pipeline,
           duration_ms: Date.now() - t0,
           song_seconds: songSeconds,
           output_mb_bucket: mbBucket(blob.size),
@@ -163,6 +182,7 @@ export function Converter() {
           trackConversionCancelled({
             input_type: inputType,
             resolution,
+            pipeline,
             stage,
             progress_pct: Math.round(progressNow.current * 100),
             duration_ms: Date.now() - t0,
@@ -176,6 +196,7 @@ export function Converter() {
         trackConversionFailed({
           input_type: inputType,
           resolution,
+          pipeline,
           stage,
           reason: classifyError(message),
           ...errorDetail(e),
@@ -295,7 +316,7 @@ export function Converter() {
                 onClick={(e) => {
                   e.stopPropagation();
                   cancelled.current = true;
-                  cancelConversion();
+                  cancelActiveConversion();
                 }}
               >
                 Cancel
@@ -352,8 +373,12 @@ export function Converter() {
       {status === "idle" && (
         <p className="text-center text-sm text-text-muted">
           A typical song takes about a minute, a little longer at 1080p.
-          <br />
-          The first conversion is slower while the converter downloads.
+          {nextPipeline === "ffmpeg" && (
+            <>
+              <br />
+              The first conversion is slower while the converter downloads.
+            </>
+          )}
         </p>
       )}
 

@@ -25,6 +25,9 @@ describe("classifyError", () => {
     [SIMD_UNSUPPORTED_MESSAGE, "simd_unsupported"],
     ["The converter failed (ffmpeg exit code 1).", "ffmpeg_error"],
     ["The converter produced an empty file.", "empty_output"],
+    ["Could not create a drawing canvas.", "encoder_error"],
+    ["This audio can't be encoded in your browser.", "encoder_error"],
+    ["The .mp3 file has no audio track.", "bad_audio"],
     ["something nobody anticipated", "unknown"],
   ])("%s -> %s", (message, code) => {
     expect(classifyError(message)).toBe(code);

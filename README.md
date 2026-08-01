@@ -5,10 +5,12 @@ browser. No upload, no server, no account. Works offline once loaded.
 
 ![Karaokio CDG-to-MP4 converter](docs/screenshot.png)
 
-It's powered by [ffmpeg.wasm](https://ffmpegwasm.netlify.app/): the FFmpeg transcode that
-the old Flask/Celery/S3 backend used to run on a server now runs client-side in WebAssembly.
-Your karaoke files are converted on your machine and never uploaded. (We do collect
-anonymous usage analytics to improve the tool, see [Privacy](#privacy).)
+The transcode that the old Flask/Celery/S3 backend ran on a server now runs client-side.
+There are two converters and the app picks one per device: a **native** pipeline built on
+[WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder), and
+[ffmpeg.wasm](https://ffmpegwasm.netlify.app/) as the fallback. Either way your karaoke
+files are converted on your machine and never uploaded. (We do collect anonymous usage
+analytics to improve the tool, see [Privacy](#privacy).)
 
 > This app is also the reference implementation for the Karaokio platform stack:
 > **React + Vite + Tailwind v4** on the shared shadcn-style design system.
@@ -17,15 +19,22 @@ anonymous usage analytics to improve the tool, see [Privacy](#privacy).)
 
 - **React 19 + Vite 6 + TypeScript** is a static SPA, no backend.
 - **Tailwind v4** + the Karaokio design system (`src/styles/tokens/`, `src/components/ui/`).
-- **ffmpeg.wasm** single-thread `@ffmpeg/core`, copied into `public/ffmpeg/` at build time
-  and served same-origin (offline-capable). Single-thread is deliberate: the multi-thread
-  core deadlocks at x264 init, and single-thread needs no COOP/COEP cross-origin-isolation
-  headers, which keeps deployment trivial.
+- **Native pipeline** (preferred): [`cdgraphics`](https://www.npmjs.com/package/cdgraphics)
+  renders CDG frames to a canvas, `VideoEncoder` encodes H.264 in the browser's own
+  (often hardware) encoder, and [`mediabunny`](https://mediabunny.dev) muxes the MP4.
+  Nothing to download, and no wasm engine involved, so it also runs on CPUs without
+  SSE4.1 where the wasm core cannot compile at all.
+- **ffmpeg.wasm** fallback, for browsers without `VideoEncoder` or without an H.264
+  encoder config the device accepts. Single-thread `@ffmpeg/core`, copied into
+  `public/ffmpeg/` at build time and served same-origin (offline-capable). Single-thread
+  is deliberate: the multi-thread core deadlocks at x264 init, and single-thread needs no
+  COOP/COEP cross-origin-isolation headers, which keeps deployment trivial.
 - **fflate** does in-browser unzip of the karaoke `.zip`.
 - **PWA** via `vite-plugin-pwa`: the app shell is precached for offline reload, and the
-  31MB ffmpeg core is runtime-cached on first use (so first paint stays fast). An
-  "Available offline" pill shows cache status and lets users save or clear the converter
-  (~30MB). Updates are prompted, never forced mid-conversion. Installable on desktop/mobile.
+  31MB ffmpeg core is runtime-cached on first use (so first paint stays fast). The
+  "Available offline" pill reflects that; on the native pipeline there is nothing to
+  download, so it reads "Available offline" from the start. Updates are prompted, never
+  forced mid-conversion. Installable on desktop/mobile.
 
 ## Develop
 
@@ -104,6 +113,8 @@ src/
     ui/             reused design-system primitives (Button, Surface, Label, Spinner)
     Converter.tsx   the dropzone → convert → preview/download flow
   lib/
+    convert.ts      picks a pipeline (?pipeline= forces one) and runs it
+    webcodecs.ts    native pipeline: cdgraphics + WebCodecs + mediabunny
     ffmpeg.ts       ffmpeg.wasm loader + convertCdgToMp4()
     zip.ts          extract cdg+mp3 from a zip
   styles/

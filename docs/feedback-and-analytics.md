@@ -58,19 +58,24 @@ VITE_POSTHOG_HOST=https://us.i.posthog.com
 **Event taxonomy** (as shipped; file *names* are sent for diagnosability, file *contents*
 never are — see PRIVACY.md):
 
-- `conversion_started` { input_type: "zip" | "pair", resolution } + input file names
-  (`zip_name`, or `cdg_name` + `mp3_name`)
-- `conversion_succeeded` { input_type, resolution, duration_ms, song_seconds,
+Every conversion event also carries `pipeline`: `"webcodecs"` for the native
+(WebCodecs) converter or `"ffmpeg"` for ffmpeg.wasm. Break down by it before reading any
+conversion metric — the two differ in speed, output size, and failure modes.
+
+- `conversion_started` { input_type: "zip" | "pair", resolution, pipeline } + input file
+  names (`zip_name`, or `cdg_name` + `mp3_name`)
+- `conversion_succeeded` { input_type, resolution, pipeline, duration_ms, song_seconds,
   output_mb_bucket, output_name } + input file names. `song_seconds` is derived from the
   CDG stream length (300 packets/sec x 24 bytes = 7200 bytes/sec), so it measures the
   graphics duration, not the usually slightly longer MP3.
-- `conversion_failed` { input_type, resolution, stage, reason, error_name?,
+- `conversion_failed` { input_type, resolution, pipeline, stage, reason, error_name?,
   error_message?, zip_extensions? } + input file names. `reason` is the low-cardinality
   code from `classifyError` (e.g. `load_failed`, `ffmpeg_error`, `bad_input`).
   `simd_unsupported` is split out from `load_failed` on purpose: it means the device's
   CPU cannot run the SIMD core at all, so it is a permanent failure rather than one a
-  retry might clear.
-- `conversion_cancelled` { input_type, resolution, stage, progress_pct, duration_ms }
+  retry might clear. `encoder_error` and `bad_audio` come from the native pipeline.
+- `conversion_cancelled` { input_type, resolution, pipeline, stage, progress_pct,
+  duration_ms }
 - `saved_for_offline`, `offline_removed`, `pwa_installed`, `update_applied`,
   `download_clicked` { resolution }
 - UI events: `theme_toggled` { theme }, `email_clicked` { trigger },

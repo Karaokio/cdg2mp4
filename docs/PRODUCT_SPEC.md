@@ -26,6 +26,8 @@ It is also the reference implementation for the Karaokio platform stack
 
 | Area | Package | Version |
 |---|---|---|
+| CDG renderer (native path) | `cdgraphics` | 7.0.0 |
+| MP4 muxer (native path) | `mediabunny` | 1.52.2 |
 | Transcoder API | `@ffmpeg/ffmpeg` | 0.12.15 |
 | Transcoder utils | `@ffmpeg/util` | 0.12.2 |
 | Transcoder core (single-thread) | `@ffmpeg/core` | 0.12.10 |
@@ -37,7 +39,45 @@ It is also the reference implementation for the Karaokio platform stack
 
 Update this table when these dependencies change, especially `@ffmpeg/core` (see below).
 
-## 4. Conversion engine (ffmpeg.wasm)
+## 4. Conversion engines
+
+Two pipelines produce the same MP4 from the same inputs. `src/lib/convert.ts` picks one per
+device, before the conversion starts, and records the choice on every analytics event as
+`pipeline`. `?pipeline=webcodecs` or `?pipeline=ffmpeg` forces one.
+
+Selection order:
+
+1. `VideoEncoder` exists **and** `isConfigSupported` accepts H.264 at the chosen output
+   size -> **native**. (Checking the config, not just the API, matters: Chromium builds
+   without proprietary codecs have the API and no H.264 encoder.)
+2. Otherwise **ffmpeg.wasm**, which preflights Wasm SIMD and explains the dead end when the
+   CPU lacks it (section 4b).
+
+### 4a. Native pipeline (WebCodecs) — `src/lib/webcodecs.ts`
+
+| Stage | Implementation |
+|---|---|
+| CDG decode | `cdgraphics` (JS) -> `ImageData`, 300x216 |
+| Scale | canvas `drawImage` with `imageSmoothingEnabled = false` |
+| Video encode | `VideoEncoder` (H.264) via mediabunny `CanvasSource` |
+| Audio | MP3 -> `AudioDecoder` -> AAC via `AudioEncoder`; MP3 packets remuxed if AAC is unavailable |
+| Mux | mediabunny, MP4 with fast-start |
+
+Behavior is matched to the ffmpeg command it replaces:
+
+- 300x216 source frames, the geometry ffmpeg's `cdgraphics` decoder emits.
+- Nearest-neighbor upscale (`scale=W:H:flags=neighbor`).
+- 30fps, with each frame rendered at the **middle** of its display interval. ffmpeg's `fps`
+  filter rounds to nearest, so this reproduces its frame selection exactly: verified
+  pixel-identical across a whole CDG against `ffmpeg -vf fps=30`. Both are exact functions
+  of the frame index, so neither drifts over a long song.
+- The video runs for the **audio's** duration, and `cdgraphics` holds the last drawn state
+  once its packets run out. That is the `tpad=stop_mode=clone` + `-shortest` behavior
+  (#64/#69) without a filter.
+- Quantizer 23 (the CRF analogue), with a resolution-scaled bitrate as the fallback for
+  browsers without quantizer-driven encoding.
+
+### 4b. Fallback engine (ffmpeg.wasm)
 
 - Uses the **single-thread** `@ffmpeg/core` build, served same-origin from `public/ffmpeg/`
   (copied in by `scripts/copy-ffmpeg-core.mjs` before dev/build). The core is roughly 31 MB.
@@ -79,16 +119,19 @@ Each feature lists acceptance criteria written as testable statements. `[unit]`,
 
 - Quality selector offers 480p (640x480), 720p (960x720), 1080p (1440x1080), all 4:3 to
   match CDG. Default is 1080p. `[unit]`
-- The selected quality is passed to ffmpeg as the scale target. `[integration]`
+- The selected quality is passed to the chosen pipeline as the scale target. `[integration]`
 - A successful run produces a non-empty MP4 with an H.264 (yuv420p) video stream and an AAC
   audio stream at the selected resolution. `[integration]`
 - A non-zero ffmpeg exit, or an empty output, surfaces an error rather than a broken result.
   `[unit]`
+- Both pipelines produce the same duration and dimensions from the same input, and the
+  duration follows the MP3, not the (often shorter) CDG. `[e2e]`
 
 ### F3 — Progress and time estimate
 
 - While converting, the UI shows a phase ("Reading files", "Loading converter",
-  "Converting"), a progress bar, and a percentage. `[e2e]`
+  "Converting"), a progress bar, and a percentage. "Loading converter" is skipped on the
+  native pipeline, which has nothing to download. `[e2e]`
 - Progress is clamped to 0..1 (ffmpeg can report slightly over 1 near the end). `[unit]`
 - After enough samples, a remaining-time estimate is shown and is rounded for calm display
   (for example "about 25s left", "about 1m 30s left"). `[unit]`
@@ -112,6 +155,9 @@ Each feature lists acceptance criteria written as testable statements. `[unit]`,
 - Offline status pill reads the real cache and shows: "Save for offline" (not cached),
   "Saving for offline" (in progress), "Available offline" (cached) with a "Remove" action,
   and "Update ready, tap to reload" when a new SW is waiting. `[e2e]`
+- On the native pipeline there is no core to fetch, so the pill reads "Available offline"
+  with no download offered. It only offers "Remove" if a core was cached previously, since
+  that space is still reclaimable. `[e2e]`
 - "Save for offline" caches the core on a single click (it polls the cache until the SW has
   written it). `[e2e]`
 - "Remove" deletes the core cache and reverts to "Save for offline". `[e2e]`
