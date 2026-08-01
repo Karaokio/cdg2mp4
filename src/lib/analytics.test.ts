@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { cdgSongSeconds, classifyError, errorDetail, mbBucket, fileName } from "./analytics";
+import { SIMD_UNSUPPORTED_MESSAGE } from "./wasmFeatures";
 
 describe("classifyError", () => {
   // The real user-facing messages from zip.ts / ffmpeg.ts / Converter.tsx.
@@ -21,6 +22,7 @@ describe("classifyError", () => {
     ["Could not load the converter. Try again, or try a different browser.", "load_failed"],
     ["Could not download the converter. Check your connection and try again.", "load_failed"],
     ["Failed to fetch the converter core (503).", "load_failed"],
+    [SIMD_UNSUPPORTED_MESSAGE, "simd_unsupported"],
     ["The converter failed (ffmpeg exit code 1).", "ffmpeg_error"],
     ["The converter produced an empty file.", "empty_output"],
     ["something nobody anticipated", "unknown"],

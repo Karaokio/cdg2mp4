@@ -67,6 +67,9 @@ never are — see PRIVACY.md):
 - `conversion_failed` { input_type, resolution, stage, reason, error_name?,
   error_message?, zip_extensions? } + input file names. `reason` is the low-cardinality
   code from `classifyError` (e.g. `load_failed`, `ffmpeg_error`, `bad_input`).
+  `simd_unsupported` is split out from `load_failed` on purpose: it means the device's
+  CPU cannot run the SIMD core at all, so it is a permanent failure rather than one a
+  retry might clear.
 - `conversion_cancelled` { input_type, resolution, stage, progress_pct, duration_ms }
 - `saved_for_offline`, `offline_removed`, `pwa_installed`, `update_applied`,
   `download_clicked` { resolution }
