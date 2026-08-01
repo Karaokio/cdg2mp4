@@ -18,7 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "verify": "npm run typecheck && npm run lint && npm run format && npm run test && npm run build",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@ffmpeg/core": "0.12.10",

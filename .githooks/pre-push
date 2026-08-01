@@ -1,0 +1,15 @@
+#!/bin/sh
+# Runs the same checks as the "Typecheck, lint, test, build" CI job before a push,
+# so a red build is caught here instead of on an open PR. E2E is not included: it
+# needs a Playwright browser and takes ~90s. Run `npm run e2e` yourself when the
+# change touches conversion flow or UI.
+#
+# Installed by the "prepare" script in package.json (git config core.hooksPath .githooks).
+# Skip a run with `git push --no-verify`.
+
+echo "pre-push: npm run verify"
+npm run verify || {
+  echo ""
+  echo "pre-push: checks failed, push aborted. Fix, or re-run with --no-verify."
+  exit 1
+}

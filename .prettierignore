@@ -9,3 +9,8 @@ docs
 test/files
 # Hand-aligned design-system token files — keep their formatting.
 src/styles/tokens
+
+# Local working dirs, not part of the app. They are untracked, so CI never sees
+# them, but `prettier --check .` does, which would fail the pre-push hook.
+insights
+user-uploads-tally
