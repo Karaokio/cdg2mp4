@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
+import { ALL_FORMATS, BufferSource, Input } from "mediabunny";
 
 const sampleZip = fileURLToPath(new URL("../test/files/sample.zip", import.meta.url));
 const keyedCdg = fileURLToPath(new URL("../test/files/sample-key.cdg", import.meta.url));
@@ -203,6 +204,67 @@ test.describe("conversion pipelines", () => {
       await expect(footer.getByRole("link", { name: "cdgraphics" })).toBeVisible();
       await expect(footer.getByRole("link", { name: "mediabunny" })).toBeVisible();
     }
+  });
+
+  // mediabunny writes tkhd alternate_group = track id, which puts the video
+  // track in alternate group 1. Safari's AVFoundation reads that as "this video
+  // is one of several selectable alternates" and never auto-hides the media
+  // controls, whose scrim then greys the picture for the whole of playback.
+  // Bisected both directions on one file pair: flipping only these two bytes in
+  // a working file breaks it, zeroing only them in a broken file fixes it.
+  // clearAlternateGroups repairs the finalized file; this checks the repair
+  // landed and the file still demuxes.
+  test("zeroes the alternate groups mediabunny writes", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles(sampleZip);
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 90_000 });
+
+    const mp4 = Buffer.from(
+      await video.evaluate(async (el: HTMLVideoElement) => {
+        const bytes = new Uint8Array(await (await fetch(el.src)).arrayBuffer());
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        }
+        return btoa(binary);
+      }),
+      "base64"
+    );
+
+    // Walk moov > trak > tkhd and read alternate_group directly.
+    const view = new DataView(mp4.buffer, mp4.byteOffset, mp4.byteLength);
+    const groups: number[] = [];
+    const walk = (start: number, end: number) => {
+      let at = start;
+      while (at + 8 <= end) {
+        const size = view.getUint32(at);
+        if (size < 8 || at + size > end) return;
+        const type = mp4.toString("latin1", at + 4, at + 8);
+        if (type === "tkhd") {
+          const version = view.getUint8(at + 8);
+          groups.push(view.getUint16(at + 8 + (version === 1 ? 46 : 34)));
+        } else if (type === "moov" || type === "trak") {
+          walk(at + 8, at + size);
+        }
+        at += size;
+      }
+    };
+    walk(0, mp4.byteLength);
+    expect(groups, "one tkhd per track, both cleared").toEqual([0, 0]);
+
+    // And the file still demuxes with real packet data readable.
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BufferSource(
+        mp4.buffer.slice(mp4.byteOffset, mp4.byteOffset + mp4.byteLength) as ArrayBuffer
+      ),
+    });
+    const track = await input.getPrimaryVideoTrack();
+    expect(track).not.toBeNull();
+    expect(await input.computeDuration()).toBeGreaterThan(AUDIO_SECONDS - 0.5);
+    expect((await track!.getFirstTimestamp()) ?? 0).toBeLessThan(0.1);
   });
 
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {
