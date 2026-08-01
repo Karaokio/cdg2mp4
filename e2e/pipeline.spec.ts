@@ -36,8 +36,35 @@ async function convert(page: Page, url: string) {
 // audio's length (the tpad/-shortest behaviour from #64/#69), not the graphics'.
 const AUDIO_SECONDS = 8.2;
 
+/**
+ * Whether this browser can actually run the native pipeline.
+ *
+ * Not every Chromium can: builds without proprietary codecs have `VideoEncoder`
+ * and no H.264 encoder behind it, which is exactly the case the routing exists
+ * for. CI installs Playwright's own Chromium rather than branded Chrome, so the
+ * tests below have to ask rather than assume, or they fail on the very
+ * configuration they are meant to tolerate.
+ */
+async function nativeAvailable(page: Page): Promise<boolean> {
+  await page.goto("/");
+  return page.evaluate(async () => {
+    if (typeof VideoEncoder === "undefined") return false;
+    try {
+      const { supported } = await VideoEncoder.isConfigSupported({
+        codec: "avc1.640028",
+        width: 1440,
+        height: 1080,
+      });
+      return !!supported;
+    } catch {
+      return false;
+    }
+  });
+}
+
 test.describe("conversion pipelines", () => {
   test("webcodecs and ffmpeg.wasm agree on the output", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
     const native = await convert(page, "/?pipeline=webcodecs");
     const wasm = await convert(page, "/?pipeline=ffmpeg");
 
@@ -59,12 +86,12 @@ test.describe("conversion pipelines", () => {
     );
   });
 
-  test("defaults to the native pipeline in a WebCodecs browser", async ({ page }) => {
-    await page.goto("/");
-    const supported = await page.evaluate(() => typeof VideoEncoder !== "undefined");
-    expect(supported).toBe(true);
-    // The wasm-only copy is the tell: it is rendered only when ffmpeg is chosen.
-    await expect(page.getByText(/while the converter downloads/i)).toHaveCount(0);
+  // Whichever way this browser goes, the copy has to match it: the "converter
+  // downloads" line is true only for the wasm path.
+  test("routes to the pipeline this browser can actually run", async ({ page }) => {
+    const native = await nativeAvailable(page);
+    const downloadNote = page.getByText(/while the converter downloads/i);
+    await expect(downloadNote).toHaveCount(native ? 0 : 1);
   });
 
   // A CD+G title can declare its background color transparent. Rendering it by
@@ -76,6 +103,7 @@ test.describe("conversion pipelines", () => {
   test("erases through a transparent background instead of compositing over it", async ({
     page,
   }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
     await page.goto("/?pipeline=webcodecs");
     await page.locator('input[type="file"]').setInputFiles([keyedCdg, sampleMp3]);
     const video = page.locator("video");
@@ -114,6 +142,7 @@ test.describe("conversion pipelines", () => {
   });
 
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "this browser does need the wasm core");
     await page.goto("/");
     await expect(page.getByText(/available offline/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /save for offline/i })).toHaveCount(0);
