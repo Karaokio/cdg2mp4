@@ -90,9 +90,13 @@ export type TitleFrame = { data: Uint8Array; mimeType: string; time: number };
  * the background is transparent and coverage counts only drawn pixels; the paint
  * does not, since the poster wants the card as the viewer will see it.
  *
- * PNG rather than JPEG: CD+G is 16-colour pixel art, which PNG stores losslessly
- * in fewer bytes than JPEG needs to store it badly, and JPEG would ring around
- * every glyph edge.
+ * JPEG rather than PNG, which is not the choice the content argues for. CD+G is
+ * 16-colour pixel art: PNG stores it losslessly and smaller, and JPEG rings
+ * around every glyph edge. But Safari never auto-hides its media controls on a
+ * file carrying a PNG cover, and its controls overlay tints the picture, so the
+ * video reads as washed out for as long as it plays. Verified by rebuilding one
+ * file three ways: no cover and a JPEG cover both behave, the PNG cover does not.
+ * The ringing is invisible at thumbnail size; a permanently dimmed player is not.
  */
 async function renderTitleFrame(
   cdg: Uint8Array,
@@ -131,10 +135,13 @@ async function renderTitleFrame(
   sourceCtx.putImageData(frame, 0, 0);
   ctx.drawImage(source, 0, 0, width, height);
 
-  const blob = await canvas.convertToBlob({ type: "image/png" });
+  // JPEG has no alpha, and the canvas spec composites transparency onto black
+  // when encoding to a format without it. discardAlpha above has already flatted
+  // the frame to its own background colour, so that never applies here.
+  const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.9 });
   const data = new Uint8Array(await blob.arrayBuffer());
   log(`cover art: title screen at ${time.toFixed(2)}s, ${mb(data.byteLength)}`);
-  return { data, mimeType: blob.type || "image/png", time };
+  return { data, mimeType: blob.type || "image/jpeg", time };
 }
 
 /**
