@@ -29,8 +29,28 @@ const EXPLAIN: [flag: string, what: string][] = [
  * deliberate: no -preset veryfast (that is a wasm speed concession) and an
  * explicit -b:a 192k (local users likely care about audio quality).
  */
-export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names?: CommandNames }) {
+export function FfmpegCommand({
+  resolution,
+  names,
+  autoOpen = false,
+}: {
+  resolution: ResKey;
+  names?: CommandNames;
+  /**
+   * Expand on mount. Set when the command is the user's actual way forward
+   * (a device that cannot run the wasm core at all), where leaving it collapsed
+   * behind "Prefer the command line?" hides the only working option.
+   */
+  autoOpen?: boolean;
+}) {
   const [copied, setCopied] = React.useState(false);
+  // Opened imperatively rather than via an `open` prop: React would treat that
+  // as controlled and snap the disclosure back shut on the next render, so the
+  // user could not collapse it again.
+  const details = React.useRef<HTMLDetailsElement>(null);
+  React.useEffect(() => {
+    if (autoOpen && details.current) details.current.open = true;
+  }, [autoOpen]);
   const size = RESOLUTIONS[resolution].replace("x", ":");
   const cdg = names?.cdg ?? "song.cdg";
   const mp3 = names?.mp3 ?? "song.mp3";
@@ -53,6 +73,7 @@ export function FfmpegCommand({ resolution, names }: { resolution: ResKey; names
 
   return (
     <details
+      ref={details}
       className="text-sm text-text-muted"
       onToggle={(e) => {
         if ((e.target as HTMLDetailsElement).open)

@@ -6,6 +6,7 @@ import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/fo
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
+import { SIMD_UNSUPPORTED_MESSAGE } from "@/lib/wasmFeatures";
 import { FeedbackPrompt } from "@/components/Feedback";
 import { FfmpegCommand, type CommandNames } from "@/components/FfmpegCommand";
 import {
@@ -404,10 +405,13 @@ export function Converter() {
         </div>
       )}
 
-      {/* Local-ffmpeg disclosure for advanced users (never during a conversion). */}
-      {(status === "idle" || status === "done") && (
+      {/* Local-ffmpeg disclosure (never during a conversion). Shown on error too:
+          a failed conversion is when a local run is most useful, and for a device
+          without Wasm SIMD it is the only thing that will work, so expand it. */}
+      {status !== "working" && (
         <FfmpegCommand
           resolution={resolution}
+          autoOpen={status === "error" && error === SIMD_UNSUPPORTED_MESSAGE}
           names={
             lastNames ??
             (held

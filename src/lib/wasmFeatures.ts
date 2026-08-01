@@ -68,8 +68,16 @@ export function isSimdCompileError(err: unknown): boolean {
   return /SIMD unsupported|v128 not enabled/i.test(message);
 }
 
-/** User-facing copy for an unsupported-SIMD device. Shared by both paths. */
+/**
+ * User-facing copy for an unsupported-SIMD device. Shared by both paths.
+ *
+ * Points at the local-ffmpeg command rather than dead-ending, because native
+ * ffmpeg has no Wasm SIMD requirement: the limit is the browser's wasm engine,
+ * not the machine. The same conversion runs fine on the very PC that cannot
+ * load the core, so this is a real workaround rather than a consolation.
+ */
 export const SIMD_UNSUPPORTED_MESSAGE =
   "This device's processor is missing the SIMD support the converter needs. " +
   "That is usually an older PC; retrying or switching browsers will not help. " +
-  "Try converting on a newer computer.";
+  "You can still convert on this computer using the ffmpeg command below, " +
+  "or use a newer computer.";
