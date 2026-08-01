@@ -2,11 +2,12 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import { CORE_JS_URL, CORE_WASM_GZ_URL } from "./coreUrls";
 import { hasWasmSimd, isSimdCompileError, SIMD_UNSUPPORTED_MESSAGE } from "./wasmFeatures";
+import { log, secs } from "./log";
 
 // The single-thread core is staged into public/ffmpeg/<version>/ (see
 // scripts/copy-ffmpeg-core.mjs) so it is served same-origin and works offline.
 // Single-thread avoids the core-mt nested-worker deadlock and needs no COOP/COEP
-// headers — see the gating spike.
+// headers; see the gating spike.
 
 export type ProgressFn = (ratio: number) => void;
 export type LogFn = (line: string) => void;
@@ -38,7 +39,7 @@ export function cancelConversion(): void {
 
 // The wasm ships gzipped to fit the host's per-file limit. Some hosts serve a
 // .gz with `Content-Encoding: gzip` (the browser then decompresses transparently)
-// and some serve it as raw gzip bytes — so detect which we got via the magic
+// and some serve it as raw gzip bytes, so detect which we got via the magic
 // bytes (gzip = 1f 8b, wasm = 00 'asm') and decompress only if needed. Hand ffmpeg
 // a same-origin blob URL of the raw wasm either way.
 async function loadWasmBlobURL(): Promise<string> {
@@ -55,6 +56,8 @@ async function loadWasmBlobURL(): Promise<string> {
 /** Lazily create and load a single shared FFmpeg instance. */
 export function loadFFmpeg(): Promise<FFmpeg> {
   if (loadPromise) return loadPromise;
+  const startedAt = Date.now();
+  log(`loading the ffmpeg core (~31 MB, then cached for offline use)`);
   loadPromise = (async () => {
     const instance = new FFmpeg();
     current = instance;
@@ -63,6 +66,7 @@ export function loadFFmpeg(): Promise<FFmpeg> {
       loadWasmBlobURL(),
     ]);
     await instance.load({ coreURL, wasmURL });
+    log(`ffmpeg core ready in ${secs(Date.now() - startedAt)}`);
     return instance;
   })().catch((err) => {
     // Never cache a rejected load (e.g. offline on first run); allow a retry.
@@ -136,6 +140,7 @@ export async function convertCdgToMp4(
     await instance.writeFile("in.cdg", cdg);
     await instance.writeFile("in.mp3", mp3);
 
+    log(`running ffmpeg: scale to ${size}, libx264 veryfast, aac`);
     const code = await instance.exec([
       "-i",
       "in.cdg",

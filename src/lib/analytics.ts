@@ -1,4 +1,5 @@
 import { APP_NAME, BUILD_COMMIT } from "./buildInfo";
+import type { Pipeline } from "./convert";
 import { getInitialTheme } from "./theme";
 
 // PostHog product analytics. Off unless a publishable project key is configured,
@@ -47,12 +48,27 @@ export function setAnalyticsTheme(theme: "light" | "dark"): void {
   ph?.register({ theme });
 }
 
+/**
+ * Tag every event, pageviews included, with whether this device can run the
+ * native pipeline. The `pipeline` property on conversion events only covers
+ * people who actually convert; this answers the rollout question -- what share
+ * of visitors the native path can reach at all -- without needing them to.
+ */
+export function setAnalyticsNativeCapable(capable: boolean): void {
+  ph?.register({ native_capable: capable });
+}
+
 /** Report a caught error (e.g. from the React error boundary). No-ops when disabled. */
 export function captureException(error: unknown, props?: Props): void {
   ph?.captureException(error, props);
 }
 
 export type InputType = "zip" | "pair"; // a .zip, or a loose .cdg + .mp3 file pair
+
+// Which converter ran: the native WebCodecs path or ffmpeg.wasm. On every
+// conversion event so the two can be compared (failure rate, duration, output
+// size) rather than averaged together.
+type ConvPipeline = { pipeline: Pipeline };
 
 // Filenames involved in a conversion (never the file contents), all with extensions:
 // zip/cdg/mp3 are the dropped inputs (known at kickoff); output_name is the resulting
@@ -65,7 +81,7 @@ type ConvFiles = {
 };
 
 export const trackConversionStarted = (
-  p: { input_type: InputType; resolution: string } & ConvFiles
+  p: { input_type: InputType; resolution: string } & ConvPipeline & ConvFiles
 ) => track("conversion_started", p);
 
 export const trackConversionSucceeded = (
@@ -75,7 +91,10 @@ export const trackConversionSucceeded = (
     duration_ms: number;
     song_seconds: number;
     output_mb_bucket: string;
-  } & ConvFiles
+    output_kbps: number;
+    audio_codec?: string;
+  } & ConvPipeline &
+    ConvFiles
 ) => track("conversion_succeeded", p);
 
 export const trackConversionFailed = (
@@ -88,7 +107,8 @@ export const trackConversionFailed = (
     error_message?: string;
     /** Extensions found inside a rejected zip (comma-joined), e.g. "mp4,txt". */
     zip_extensions?: string;
-  } & ConvFiles
+  } & ConvPipeline &
+    ConvFiles
 ) => track("conversion_failed", p);
 
 export const trackConversionCancelled = (
@@ -98,7 +118,8 @@ export const trackConversionCancelled = (
     stage: string;
     progress_pct: number;
     duration_ms: number;
-  } & ConvFiles
+  } & ConvPipeline &
+    ConvFiles
 ) => track("conversion_cancelled", p);
 
 /**
@@ -131,6 +152,20 @@ export function cdgSongSeconds(cdgBytes: number): number {
   return Math.round(cdgBytes / 7200);
 }
 
+/**
+ * Output bitrate, rounded to the nearest 25 kbps.
+ *
+ * `output_mb_bucket` is too coarse to compare the two pipelines: a 3-minute song
+ * is 6 MB on one and 5 MB on the other, and both are "5-20". This normalizes out
+ * song length, so a size regression on either path is visible in an average
+ * rather than needing a bucket boundary to fall in the right place. Rounding
+ * keeps it from being a precise (identifying) file size.
+ */
+export function outputKbps(bytes: number, seconds: number): number {
+  if (!seconds) return 0;
+  return Math.round((bytes * 8) / seconds / 1000 / 25) * 25;
+}
+
 /** Coarse size buckets so an exact (potentially identifying) file size is never stored. */
 export function mbBucket(bytes: number): string {
   const mb = bytes / 1048576;
@@ -154,6 +189,10 @@ export function classifyError(message: string): string {
   if (/load the converter|download the converter|converter core/i.test(message))
     return "load_failed";
   if (/exit code/i.test(message)) return "ffmpeg_error";
+  // Native-pipeline failures. Separate codes because they point at different
+  // fixes: a device that cannot encode needs routing, a bad .mp3 needs the user.
+  if (/drawing canvas|can't be encoded in your browser/i.test(message)) return "encoder_error";
+  if (/no audio track/i.test(message)) return "bad_audio";
   if (/produced an empty/i.test(message)) return "empty_output";
   if (/Drop a karaoke|matching|file is empty/i.test(message)) return "bad_input";
   if (/valid \.zip/i.test(message)) return "invalid_zip";

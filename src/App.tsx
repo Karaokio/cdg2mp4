@@ -7,6 +7,7 @@ import { FeedbackLink } from "@/components/Feedback";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Label } from "@/components/ui";
 import { track } from "@/lib/analytics";
+import { usePipeline } from "@/lib/usePipeline";
 
 const MailIcon = () => (
   <svg
@@ -25,6 +26,7 @@ const MailIcon = () => (
 );
 
 export default function App() {
+  const pipeline = usePipeline();
   return (
     <div className="min-h-full bg-background">
       <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-3xl">
@@ -53,16 +55,38 @@ export default function App() {
         </div>
 
         <footer className="flex flex-col items-center gap-md text-center text-sm text-text-muted">
+          {/* Name whatever is actually converting on this device. Most visitors
+              never touch ffmpeg now, and crediting it to them would be wrong;
+              the ones still on it deserve to know why theirs is the slow path.
+              Neutral until the probe resolves, so neither name flashes. */}
           <p>
-            Runs entirely in your browser · works offline · powered by{" "}
-            <a
-              className="text-brand-label underline"
-              href="https://ffmpegwasm.netlify.app/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              ffmpeg.wasm
-            </a>
+            Runs entirely in your browser · works offline
+            {pipeline === "webcodecs" && (
+              <>
+                {" · powered by "}
+                <a
+                  className="text-brand-label underline"
+                  href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  WebCodecs
+                </a>
+              </>
+            )}
+            {pipeline === "ffmpeg" && (
+              <>
+                {" · powered by "}
+                <a
+                  className="text-brand-label underline"
+                  href="https://ffmpegwasm.netlify.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  ffmpeg.wasm
+                </a>
+              </>
+            )}
           </p>
           <SocialLinks />
           <div className="flex items-center gap-3">

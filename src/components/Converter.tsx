@@ -1,11 +1,13 @@
 import * as React from "react";
 import { Button, Label, Spinner, Surface } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { convertCdgToMp4, cancelConversion } from "@/lib/ffmpeg";
+import { convertPair, cancelActiveConversion, selectPipeline, type Pipeline } from "@/lib/convert";
 import { RESOLUTIONS, resolutionToSize, formatLeft, type ResKey } from "@/lib/format";
 import { extractPairFromZip, pairFromFiles, ZipPairError } from "@/lib/zip";
 import { selectInput, type Held } from "@/lib/inputFiles";
 import { setConverting } from "@/lib/converting";
+import { usePipeline } from "@/lib/usePipeline";
+import { log, logError, mb, secs } from "@/lib/log";
 import { SIMD_UNSUPPORTED_MESSAGE } from "@/lib/wasmFeatures";
 import { FeedbackPrompt } from "@/components/Feedback";
 import { FfmpegCommand, type CommandNames } from "@/components/FfmpegCommand";
@@ -16,6 +18,7 @@ import {
   trackConversionCancelled,
   track,
   mbBucket,
+  outputKbps,
   cdgSongSeconds,
   classifyError,
   errorDetail,
@@ -72,6 +75,10 @@ export function Converter() {
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
   // Real filenames for the "run it locally" command, once a conversion knows them.
   const [lastNames, setLastNames] = React.useState<CommandNames | undefined>();
+  // The input and pipeline of the last failed run, for the retry offer below.
+  const [lastRun, setLastRun] = React.useState<RunInput | null>(null);
+  const [failedPipeline, setFailedPipeline] = React.useState<Pipeline | null>(null);
+  const nextPipeline = usePipeline(resolution);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const startedAt = React.useRef<number | null>(null);
   const cancelled = React.useRef(false); // user hit Cancel during this run
@@ -85,7 +92,9 @@ export function Converter() {
   }, [result]);
 
   const run = React.useCallback(
-    async (input: RunInput) => {
+    // `force` re-runs a failed conversion on the other pipeline. Only the retry
+    // passes it; normal runs let selectPipeline decide.
+    async (input: RunInput, force?: Pipeline) => {
       if (result) URL.revokeObjectURL(result.url);
       setResult(null);
       setError("");
@@ -96,6 +105,9 @@ export function Converter() {
       progressNow.current = 0;
       setStatus("working");
       setHeld(null); // consumed by this conversion, or superseded by a zip
+      // Kept so a failure can be retried on the other pipeline. These are File
+      // handles, still readable after the first attempt detached its buffers.
+      setLastRun(input);
 
       const inputType: InputType = input.type;
       // The input filenames, captured up front (contents never leave the device).
@@ -106,9 +118,14 @@ export function Converter() {
       const t0 = Date.now();
       let stage = "read";
       let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
+      let audioCodec: "aac" | "mp3" | undefined; // native path only
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
-      trackConversionStarted({ input_type: inputType, resolution, ...inputNames });
+      // Resolved before the first event so every event of this run (including a
+      // failure during load) carries the pipeline that produced it.
+      const size = resolutionToSize(resolution);
+      const pipeline = force ?? (await selectPipeline(size));
+      trackConversionStarted({ input_type: inputType, resolution, pipeline, ...inputNames });
       try {
         setPhase("Reading files…");
         const pair =
@@ -116,7 +133,11 @@ export function Converter() {
             ? extractPairFromZip(await read(input.zip))
             : pairFromFiles(await read(input.cdg), await read(input.mp3), input.cdg.name);
         outputName = fileName(`${pair.baseName}.mp4`);
-        // Measure now: convertCdgToMp4 transfers pair.cdg's buffer to the ffmpeg
+        log(
+          `converting ${input.type === "zip" ? input.zip.name : input.cdg.name} ` +
+            `at ${resolution} (${size})`
+        );
+        // Measure now: the ffmpeg path transfers pair.cdg's buffer to its
         // worker, detaching it, so byteLength reads 0 after the conversion.
         const songSeconds = cdgSongSeconds(pair.cdg.byteLength);
         setLastNames(
@@ -126,9 +147,15 @@ export function Converter() {
         );
 
         stage = "load";
-        setPhase("Loading converter…");
-        const mp4 = await convertCdgToMp4(pair.cdg, pair.mp3, {
-          size: resolutionToSize(resolution),
+        // Only the wasm path has a converter to download; the native one starts
+        // encoding immediately.
+        setPhase(pipeline === "ffmpeg" ? "Loading converter…" : "Converting…");
+        const mp4 = await convertPair(pair.cdg, pair.mp3, {
+          size,
+          pipeline,
+          onAudioCodec: (c) => {
+            audioCodec = c;
+          },
           onProgress: (r) => {
             stage = "convert";
             progressNow.current = r;
@@ -141,7 +168,13 @@ export function Converter() {
           },
         });
 
+        const elapsed = Date.now() - t0;
         const blob = new Blob([mp4 as BlobPart], { type: "video/mp4" });
+        log(
+          `done in ${secs(elapsed)} · ${mb(blob.size)}, ` +
+            `${(songSeconds / (elapsed / 1000)).toFixed(1)}x realtime`,
+          { pipeline, resolution, audio: audioCodec }
+        );
         const url = URL.createObjectURL(blob);
         setResult({ url, name: `${pair.baseName}.mp4` });
         setProgress(1);
@@ -149,9 +182,12 @@ export function Converter() {
         trackConversionSucceeded({
           input_type: inputType,
           resolution,
+          pipeline,
           duration_ms: Date.now() - t0,
           song_seconds: songSeconds,
           output_mb_bucket: mbBucket(blob.size),
+          output_kbps: outputKbps(blob.size, songSeconds),
+          audio_codec: audioCodec,
           ...inputNames,
           output_name: outputName,
         });
@@ -160,9 +196,11 @@ export function Converter() {
           // User-requested stop, not a failure: back to the empty dropzone.
           setStatus("idle");
           setPhase("");
+          log(`cancelled after ${secs(Date.now() - t0)}`);
           trackConversionCancelled({
             input_type: inputType,
             resolution,
+            pipeline,
             stage,
             progress_pct: Math.round(progressNow.current * 100),
             duration_ms: Date.now() - t0,
@@ -171,11 +209,14 @@ export function Converter() {
           return;
         }
         const message = e instanceof Error ? e.message : String(e);
+        logError(`failed during "${stage}" on ${pipeline}: ${message}`, (e as Error)?.cause);
         setError(message);
         setStatus("error");
+        setFailedPipeline(pipeline);
         trackConversionFailed({
           input_type: inputType,
           resolution,
+          pipeline,
           stage,
           reason: classifyError(message),
           ...errorDetail(e),
@@ -295,7 +336,7 @@ export function Converter() {
                 onClick={(e) => {
                   e.stopPropagation();
                   cancelled.current = true;
-                  cancelConversion();
+                  cancelActiveConversion();
                 }}
               >
                 Cancel
@@ -351,9 +392,18 @@ export function Converter() {
       {/* Expectation note (idle only) */}
       {status === "idle" && (
         <p className="text-center text-sm text-text-muted">
-          A typical song takes about a minute, a little longer at 1080p.
-          <br />
-          The first conversion is slower while the converter downloads.
+          {/* The two pipelines are an order of magnitude apart: a 3-minute song
+              at 1080p measured 15s on the native path against 2m52s on
+              ffmpeg.wasm, so one promise cannot cover both honestly. */}
+          {nextPipeline === "ffmpeg" ? (
+            <>
+              A typical song takes about a minute, a little longer at 1080p.
+              <br />
+              The first conversion is slower while the converter downloads.
+            </>
+          ) : (
+            "Most songs convert in well under a minute, even at 1080p."
+          )}
         </p>
       )}
 
@@ -401,6 +451,31 @@ export function Converter() {
           >
             {error}
           </div>
+          {/* The native pipeline is new; ffmpeg.wasm has converted these files
+              for years. When the new one fails on a device or a rip we cannot
+              reproduce, the old one is right there, so offer it at the only
+              moment it is useful, rather than making everyone choose an engine
+              up front. Not offered when ffmpeg.wasm is what just failed, nor
+              for a bad input that would fail identically either way. */}
+          {failedPipeline === "webcodecs" && lastRun && classifyError(error) !== "bad_input" && (
+            <div className="flex flex-col items-center gap-sm">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  log("retrying on ffmpeg.wasm at the user's request");
+                  track("pipeline_retry_used", { from: "webcodecs", to: "ffmpeg", resolution });
+                  void run(lastRun, "ffmpeg");
+                }}
+              >
+                Try the original converter
+              </Button>
+              <p className="text-center text-sm text-text-muted">
+                Slower, and it downloads about 30 MB, but it has been converting these files for
+                years.
+              </p>
+            </div>
+          )}
           <FeedbackPrompt result="failure" resolution={resolution} input_type={lastInput} />
         </div>
       )}
