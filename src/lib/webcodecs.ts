@@ -13,7 +13,12 @@
  */
 
 import { canEncodeVideo } from "mediabunny";
-import { parseSize, videoQuality } from "./webcodecs/encode";
+import {
+  parseSize,
+  quantizerIsSafeToAsk,
+  resetQuantizerProbe,
+  videoQuality,
+} from "./webcodecs/encode";
 import type { WorkerRequest, WorkerResponse } from "./webcodecs/worker";
 import type { ProgressFn } from "./ffmpeg";
 import { log, logError, mb, secs } from "./log";
@@ -36,7 +41,11 @@ export async function canUseWebCodecs(size: string): Promise<boolean> {
   try {
     if (typeof VideoEncoder !== "undefined" && typeof OffscreenCanvas !== "undefined") {
       const [width, height] = parseSize(size);
-      ok = await canEncodeVideo("avc", { width, height, quality: videoQuality(width, height) });
+      // Same Quality the encode will use, so this answers the question actually
+      // being asked. It has to be built the same way too: a quantizer this
+      // browser cannot even be asked about turns the probe below into a throw.
+      const quality = videoQuality(width, height, await quantizerIsSafeToAsk());
+      ok = await canEncodeVideo("avc", { width, height, quality });
     }
   } catch {
     ok = false;
@@ -48,6 +57,7 @@ export async function canUseWebCodecs(size: string): Promise<boolean> {
 /** Test seam: drop the memoized capability results. */
 export function resetWebCodecsSupportCache(): void {
   supportCache = new Map();
+  resetQuantizerProbe();
 }
 
 // The conversion in flight, if any: the worker plus the way to stop it.

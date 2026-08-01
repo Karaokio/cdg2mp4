@@ -85,6 +85,8 @@ export function renderTimeForFrame(index: number, fps = FPS): number {
  * The quantizer is what we want but not yet what we get: Chrome 149 rejects
  * `bitrateMode: "quantizer"` for AVC, so mediabunny falls back to the bitrate
  * below, and it will pick the quantizer up for free whenever Chrome ships it.
+ * Where asking for it is fatal rather than merely unsupported, `quantizer` is
+ * false and the Quality carries the bitrate alone: see `quantizerIsSafeToAsk`.
  *
  * The bitrate is therefore a ceiling rather than a target, and VBR on this
  * content lands well under it (0.27 Mbps of a 1.40 Mbps allowance on a 1080p
@@ -102,12 +104,55 @@ export function renderTimeForFrame(index: number, fps = FPS): number {
  * bytes. x264's rate control is simply better than the browser's at this
  * quality; matching its size means giving up measurably more than it does.
  */
-export function videoQuality(width: number, height: number): Quality {
+export function videoQuality(width: number, height: number, quantizer = true): Quality {
   return new Quality({
-    quantizer: 23,
+    ...(quantizer ? { quantizer: 23 } : {}),
     bitrate: Math.round(width * height * FPS * 0.03),
     bitrateMode: "variable",
   });
+}
+
+// Memoized: one probe per realm, and both the capability check and the encode
+// need the same answer.
+let quantizerSafe: Promise<boolean> | null = null;
+
+/**
+ * Whether this browser tolerates being *asked* about `bitrateMode: "quantizer"`.
+ * Not the same as supporting it.
+ *
+ * A Quality carrying a quantizer makes mediabunny probe two encoder configs, the
+ * quantizer one first, and take the first that works. Chrome reports the
+ * quantizer config unsupported and the loop moves on to the bitrate config.
+ * Safari has no such enum value, so `isConfigSupported` rejects with a TypeError
+ * instead; the throw escapes the loop before the bitrate config it would have
+ * accepted is ever tried, and the whole native pipeline reads as unavailable.
+ * Every Safari user was downloading ffmpeg.wasm because of it.
+ *
+ * So probe the hostile part alone. False here means build the Quality without a
+ * quantizer, leaving one candidate that Safari answers honestly.
+ */
+export function quantizerIsSafeToAsk(): Promise<boolean> {
+  quantizerSafe ??= (async () => {
+    if (typeof VideoEncoder === "undefined") return false;
+    try {
+      // The result is irrelevant; only whether asking throws.
+      await VideoEncoder.isConfigSupported({
+        codec: "avc1.640028",
+        width: 1440,
+        height: 1080,
+        bitrateMode: "quantizer",
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return quantizerSafe;
+}
+
+/** Test seam: drop the memoized probe result. */
+export function resetQuantizerProbe(): void {
+  quantizerSafe = null;
 }
 
 /**
@@ -234,7 +279,7 @@ export async function encodeCdgToMp4(
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
   const videoSource = new CanvasSource(canvas, {
     codec: "avc",
-    quality: videoQuality(width, height),
+    quality: videoQuality(width, height, await quantizerIsSafeToAsk()),
     keyFrameInterval: KEY_FRAME_INTERVAL,
   });
   output.addVideoTrack(videoSource, { frameRate: FPS });
