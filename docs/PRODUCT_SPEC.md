@@ -55,6 +55,12 @@ Selection order:
 
 ### 4a. Native pipeline (WebCodecs) — `src/lib/webcodecs.ts`
 
+Runs entirely in a dedicated worker (`src/lib/webcodecs/worker.ts`), one per
+conversion. That keeps the main thread free for React and the compositor during
+a multi-thousand-frame encode, and makes cancellation exact: `terminate()` stops
+the encode mid-frame and releases every buffer, with no cooperative check
+anywhere in the encode loop.
+
 | Stage | Implementation |
 |---|---|
 | CDG decode | `cdgraphics` (JS) -> `ImageData`, 300x216 |
@@ -74,8 +80,25 @@ Behavior is matched to the ffmpeg command it replaces:
 - The video runs for the **audio's** duration, and `cdgraphics` holds the last drawn state
   once its packets run out. That is the `tpad=stop_mode=clone` + `-shortest` behavior
   (#64/#69) without a filter.
-- Quantizer 23 (the CRF analogue), with a resolution-scaled bitrate as the fallback for
-  browsers without quantizer-driven encoding.
+- Quantizer 23 (the CRF analogue), with a resolution-scaled bitrate as the fallback.
+  Chrome 149 still rejects `bitrateMode: "quantizer"` for AVC, so today the bitrate is
+  what runs; the quantizer takes over for free when Chrome ships it.
+- Keyframes every 250 frames, x264's default and what the ffmpeg path already produces.
+  This is the dominant lever on output size for near-static content: mediabunny's 2s
+  default cost 15.9 MB against 8.0 MB at 250 frames on the same rip, at an SSIM of 0.996
+  between the two. Rate control is not the binding constraint, and lowering the bitrate
+  below the current ceiling does not shrink the file.
+
+**Measured** on a real 188s rip at 1080p (`TRKD1502`, Chromium 149, M-series laptop):
+
+| | encode | output | frames matching `ffmpeg -vf fps=30` |
+|---|---|---|---|
+| Native | 13.1s (14x realtime) | 8.0 MB | 97% pixel-identical, rest under 0.1% of pixels |
+| ffmpeg (native binary, 8 cores) | 7.6s | 4.7 MB | reference |
+
+x264's CRF still beats a bitrate-capped VBR encoder on flat art, so the native output is
+about 1.7x larger. In the browser, where the comparison is against ffmpeg.wasm rather than
+a native binary, the native path is several times faster.
 
 ### 4b. Fallback engine (ffmpeg.wasm)
 

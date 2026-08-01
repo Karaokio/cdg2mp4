@@ -1,9 +1,11 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { canUseWebCodecs, renderTimeForFrame, resetWebCodecsSupportCache } from "./webcodecs";
+import { canUseWebCodecs, resetWebCodecsSupportCache } from "./webcodecs";
+import { renderTimeForFrame } from "./webcodecs/encode";
 
 afterEach(() => {
   resetWebCodecsSupportCache();
   delete (globalThis as Record<string, unknown>).VideoEncoder;
+  delete (globalThis as Record<string, unknown>).OffscreenCanvas;
 });
 
 describe("renderTimeForFrame", () => {
@@ -34,6 +36,7 @@ describe("canUseWebCodecs", () => {
   });
 
   it("is false when the H.264 config is rejected, not merely because the API exists", async () => {
+    (globalThis as Record<string, unknown>).OffscreenCanvas = class {};
     (globalThis as Record<string, unknown>).VideoEncoder = {
       isConfigSupported: () => Promise.resolve({ supported: false, config: {} }),
     };
@@ -41,6 +44,7 @@ describe("canUseWebCodecs", () => {
   });
 
   it("is false rather than throwing when detection itself blows up", async () => {
+    (globalThis as Record<string, unknown>).OffscreenCanvas = class {};
     (globalThis as Record<string, unknown>).VideoEncoder = {
       isConfigSupported: () => {
         throw new Error("nope");

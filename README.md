@@ -22,6 +22,7 @@ analytics to improve the tool, see [Privacy](#privacy).)
 - **Native pipeline** (preferred): [`cdgraphics`](https://www.npmjs.com/package/cdgraphics)
   renders CDG frames to a canvas, `VideoEncoder` encodes H.264 in the browser's own
   (often hardware) encoder, and [`mediabunny`](https://mediabunny.dev) muxes the MP4.
+  It all runs in a worker, so the UI stays responsive and Cancel is a `terminate()`.
   Nothing to download, and no wasm engine involved, so it also runs on CPUs without
   SSE4.1 where the wasm core cannot compile at all.
 - **ffmpeg.wasm** fallback, for browsers without `VideoEncoder` or without an H.264
@@ -114,7 +115,10 @@ src/
     Converter.tsx   the dropzone → convert → preview/download flow
   lib/
     convert.ts      picks a pipeline (?pipeline= forces one) and runs it
-    webcodecs.ts    native pipeline: cdgraphics + WebCodecs + mediabunny
+    webcodecs.ts    native pipeline: capability detection + worker lifecycle
+    webcodecs/
+      encode.ts     the native pipeline itself (cdgraphics + WebCodecs + mediabunny)
+      worker.ts     runs encode.ts off the main thread
     ffmpeg.ts       ffmpeg.wasm loader + convertCdgToMp4()
     zip.ts          extract cdg+mp3 from a zip
   styles/
