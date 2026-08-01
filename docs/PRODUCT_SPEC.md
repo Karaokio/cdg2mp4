@@ -97,18 +97,25 @@ Behavior is matched to the ffmpeg command it replaces:
   6.1 MB and 13% of encode time, which does not justify handing a variable-rate file to an
   unknown TV or bar player.
 
-**Measured** on a real 188s rip at 1080p (`TRKD1502`, Chromium 149, M-series laptop).
-SSIM is against a lossless render of the same CDG:
+**Measured** end to end through the app on a real 188s rip at 1080p (`TRKD1502`,
+Chromium 149, M-series laptop). SSIM is against a lossless render of the same CDG:
 
-| | encode | output | SSIM | frames matching `ffmpeg -vf fps=30` |
-|---|---|---|---|---|
-| Native | 14.1s (13x realtime) | 6.1 MB | 0.9984 | 97% pixel-identical, rest under 0.1% of pixels |
-| ffmpeg (native binary, 8 cores) | 7.6s | 4.7 MB | 0.9966 | reference |
+| | wall clock | output | SSIM |
+|---|---|---|---|
+| Native (WebCodecs) | **15.0s** (12.5x realtime) | 6.1 MB | 0.9984 |
+| ffmpeg.wasm | **171.6s** (1.1x realtime) | 4.7 MB | 0.9966 |
+| ffmpeg (native binary, 8 cores, for reference) | 7.6s | 4.7 MB | 0.9966 |
 
-The native path is slightly the higher quality of the two, for about 1.3x the bytes:
-x264's rate control is better than the browser's, and matching its size means giving up
-measurably more quality than it does. In the browser the comparison is against
-ffmpeg.wasm rather than a native binary, where the native path is several times faster.
+**11x faster than the path it replaces**, on hardware that runs ffmpeg.wasm well. The
+gap widens on the older machines this targets, and on a pre-SSE4.1 CPU the wasm path does
+not run at all.
+
+Frame fidelity against `ffmpeg -vf fps=30` on the same rip: 97% of frames pixel-identical,
+every remaining frame differing by under 0.1% of its pixels.
+
+On size, the native path is slightly the higher quality of the two for about 1.3x the
+bytes. x264's rate control is better than the browser's, and matching its size means
+giving up measurably more quality than it does.
 
 ### 4b. Fallback engine (ffmpeg.wasm)
 

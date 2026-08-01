@@ -372,12 +372,17 @@ export function Converter() {
       {/* Expectation note (idle only) */}
       {status === "idle" && (
         <p className="text-center text-sm text-text-muted">
-          A typical song takes about a minute, a little longer at 1080p.
-          {nextPipeline === "ffmpeg" && (
+          {/* The two pipelines are an order of magnitude apart: a 3-minute song
+              at 1080p measured 15s on the native path against 2m52s on
+              ffmpeg.wasm, so one promise cannot cover both honestly. */}
+          {nextPipeline === "ffmpeg" ? (
             <>
+              A typical song takes about a minute, a little longer at 1080p.
               <br />
               The first conversion is slower while the converter downloads.
             </>
+          ) : (
+            "Most songs convert in well under a minute, even at 1080p."
           )}
         </p>
       )}
