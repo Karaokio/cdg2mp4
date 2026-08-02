@@ -26,7 +26,8 @@
  */
 
 import CDGraphics from "cdgraphics";
-import { log } from "../log";
+import { log, mb } from "../log";
+import { coverageOf, discardAlpha, findTitleFrameTime } from "./titleFrame";
 import { clearAlternateGroups } from "./altGroups";
 import {
   ALL_FORMATS,
@@ -76,6 +77,64 @@ const PACKETS_PER_SEC = 300;
 export function renderTimeForFrame(index: number, fps = FPS): number {
   const middle = (index + 0.5) / fps;
   return Math.max(0, Math.ceil(PACKETS_PER_SEC * middle) - 1) / PACKETS_PER_SEC;
+}
+
+/** A still image, ready to embed in the MP4 and to show as the player's poster. */
+export type TitleFrame = { data: Uint8Array; mimeType: string; time: number };
+
+/**
+ * The rip's title screen as a PNG, or null when it has none.
+ *
+ * Two passes over the opening seconds: one to find the moment the screen settles
+ * (see titleFrame.ts), one to render that moment. The scan uses `forceKey` so
+ * the background is transparent and coverage counts only drawn pixels; the paint
+ * does not, since the poster wants the card as the viewer will see it.
+ *
+ * PNG rather than JPEG: CD+G is 16-colour pixel art, which PNG stores losslessly
+ * in fewer bytes than JPEG needs to store it badly, and JPEG would ring around
+ * every glyph edge.
+ */
+async function renderTitleFrame(
+  cdg: Uint8Array,
+  width: number,
+  height: number
+): Promise<TitleFrame | null> {
+  // Its own decoder, so seeking around the opening cannot disturb the encode.
+  const graphics = new CDGraphics(
+    cdg.buffer.slice(cdg.byteOffset, cdg.byteOffset + cdg.byteLength) as ArrayBuffer
+  );
+
+  const time = findTitleFrameTime((at) => {
+    const { isChanged, imageData } = graphics.render(at, { forceKey: true });
+    return { isChanged, coverage: coverageOf(imageData.data) };
+  });
+  if (time === null) {
+    log("no cover art: this rip has no title screen before the lyrics start");
+    return null;
+  }
+
+  const source = new OffscreenCanvas(CDG_WIDTH, CDG_HEIGHT);
+  const sourceCtx = source.getContext("2d", { willReadFrequently: true });
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+  if (!sourceCtx || !ctx) return null;
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalCompositeOperation = "copy";
+
+  // Re-render at the chosen time without forceKey. The decoder is already past
+  // it, so this seeks backwards and replays, which cdgraphics handles. The
+  // alpha discard matches the video encoder, so the cover image and the frames
+  // it stands for show the same background. Safe to mutate: this decoder is
+  // ours alone, and the pixels go straight to the canvas.
+  const frame = graphics.render(time).imageData;
+  discardAlpha(frame.data);
+  sourceCtx.putImageData(frame, 0, 0);
+  ctx.drawImage(source, 0, 0, width, height);
+
+  const blob = await canvas.convertToBlob({ type: "image/png" });
+  const data = new Uint8Array(await blob.arrayBuffer());
+  log(`cover art: title screen at ${time.toFixed(2)}s, ${mb(data.byteLength)}`);
+  return { data, mimeType: blob.type || "image/png", time };
 }
 
 /**
@@ -262,7 +321,7 @@ export async function encodeCdgToMp4(
   // MP3-in-MP4 are not equally playable, and a device quietly getting the
   // second one is a plausible cause of a "the file won't play" report.
   onAudioCodec?: (codec: "aac" | "mp3") => void
-): Promise<ArrayBuffer> {
+): Promise<{ buffer: ArrayBuffer; poster: TitleFrame | null }> {
   const [width, height] = parseSize(size);
 
   // The renderer needs a standalone ArrayBuffer. `cdg` may be a view into the
@@ -293,6 +352,21 @@ export async function encodeCdgToMp4(
     keyFrameInterval: KEY_FRAME_INTERVAL,
   });
   output.addVideoTrack(videoSource, { frameRate: FPS });
+
+  // Cover art, when this rip has a title screen to find. Runs before start()
+  // because metadata has to be set before the output is writing, and it uses its
+  // own decoder so the scan cannot disturb the encode's position. Never fatal:
+  // a conversion that produced a playable MP4 has done its job whether or not it
+  // also found a thumbnail.
+  const poster = await renderTitleFrame(cdg, width, height).catch((err: unknown) => {
+    log(`no cover art: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  });
+  if (poster) {
+    output.setMetadataTags({
+      images: [{ data: poster.data, mimeType: poster.mimeType, kind: "coverFront" }],
+    });
+  }
 
   try {
     const audio = await addAudioTrack(output, mp3);
@@ -383,7 +457,7 @@ export async function encodeCdgToMp4(
     }
     // Two-byte repair of a mediabunny bug that breaks Safari. See altGroups.ts.
     clearAlternateGroups(new Uint8Array(buffer));
-    return buffer;
+    return { buffer, poster };
   } catch (err) {
     // Release the encoders and the muxer's buffers before the error propagates.
     await output.cancel().catch(() => {});

@@ -206,6 +206,51 @@ test.describe("conversion pipelines", () => {
     }
   });
 
+  // Frame 0 of a CD+G is always blank, so a player and a file browser both open
+  // on black unless something puts the title screen in front. sample.cdg draws
+  // its screen over the first 4s and then holds it, which is exactly the shape
+  // the detector looks for.
+  test("posters the player and the file with the rip's title screen", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles(sampleZip);
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 90_000 });
+
+    // The page player shows it.
+    await expect(video).toHaveAttribute("poster", /^blob:/);
+
+    // And it is in the file itself, so Finder, QuickTime and phone galleries get
+    // a thumbnail rather than a black frame. Demuxed here in the test process
+    // rather than in the page, which has no bare module specifiers to import.
+    const mp4 = Buffer.from(
+      await video.evaluate(async (el: HTMLVideoElement) => {
+        const bytes = new Uint8Array(await (await fetch(el.src)).arrayBuffer());
+        // Chunked: spreading a few hundred thousand args at once overflows the
+        // call stack.
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        }
+        return btoa(binary);
+      }),
+      "base64"
+    );
+
+    const input = new Input({
+      formats: ALL_FORMATS,
+      source: new BufferSource(
+        mp4.buffer.slice(mp4.byteOffset, mp4.byteOffset + mp4.byteLength) as ArrayBuffer
+      ),
+    });
+    const [cover] = (await input.getMetadataTags()).images ?? [];
+    expect(cover, "the MP4 carries cover art").toBeDefined();
+    expect(cover.kind).toBe("coverFront");
+    expect(cover.mimeType).toBe("image/png");
+    // A real PNG, not an empty placeholder.
+    expect(Buffer.from(cover.data.subarray(0, 8)).toString("hex")).toBe("89504e470d0a1a0a");
+  });
+
   // mediabunny writes tkhd alternate_group = track id, which puts the video
   // track in alternate group 1. Safari's AVFoundation reads that as "this video
   // is one of several selectable alternates" and never auto-hides the media
@@ -265,6 +310,18 @@ test.describe("conversion pipelines", () => {
     expect(track).not.toBeNull();
     expect(await input.computeDuration()).toBeGreaterThan(AUDIO_SECONDS - 0.5);
     expect((await track!.getFirstTimestamp()) ?? 0).toBeLessThan(0.1);
+  });
+
+  // The wasm path has no title-frame detection, and the player must still look
+  // right without one. Same for a rip that opens straight into lyrics.
+  test("shows the player without a poster when the pipeline cannot supply one", async ({
+    page,
+  }) => {
+    await page.goto("/?pipeline=ffmpeg");
+    await page.locator('input[type="file"]').setInputFiles(sampleZip);
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 90_000 });
+    await expect(video).not.toHaveAttribute("poster");
   });
 
   test("does not offer a converter download the native pipeline never uses", async ({ page }) => {

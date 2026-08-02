@@ -90,6 +90,10 @@ export async function convertPair(
     onLog?: LogFn;
     /** Native pipeline only: which audio codec its fallback chain chose. */
     onAudioCodec?: (codec: "aac" | "mp3") => void;
+    /** Native pipeline only, and only when the rip has a title screen: a still
+     * of it, already embedded in the MP4 as cover art. ffmpeg.wasm never fires
+     * this, so the same conversion can come back with or without one. */
+    onPoster?: (poster: Blob) => void;
   } = {}
 ): Promise<Uint8Array> {
   const size = opts.size ?? "1440x1080";
@@ -100,6 +104,7 @@ export async function convertPair(
         size,
         onProgress: opts.onProgress,
         onAudioCodec: opts.onAudioCodec,
+        onPoster: opts.onPoster,
       })
     : convertCdgToMp4(cdg, mp3, { size, onProgress: opts.onProgress, onLog: opts.onLog });
 }

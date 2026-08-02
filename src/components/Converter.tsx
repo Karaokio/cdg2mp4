@@ -62,6 +62,12 @@ function ResolutionPicker({ value, onChange }: { value: ResKey; onChange: (r: Re
   );
 }
 
+/** A finished conversion holds up to two object URLs; both have to go together. */
+function revokeResult(result: { url: string; poster?: string }) {
+  URL.revokeObjectURL(result.url);
+  if (result.poster) URL.revokeObjectURL(result.poster);
+}
+
 export function Converter() {
   const [status, setStatus] = React.useState<Status>("idle");
   const [resolution, setResolution] = React.useState<ResKey>("1080p");
@@ -69,7 +75,13 @@ export function Converter() {
   const [phase, setPhase] = React.useState("");
   const [eta, setEta] = React.useState(0);
   const [error, setError] = React.useState("");
-  const [result, setResult] = React.useState<{ url: string; name: string } | null>(null);
+  // `poster` is the rip's title screen, absent when it has none or when the
+  // wasm pipeline ran, so the player has to look right without one.
+  const [result, setResult] = React.useState<{
+    url: string;
+    name: string;
+    poster?: string;
+  } | null>(null);
   const [dragging, setDragging] = React.useState(false);
   const [held, setHeld] = React.useState<Held<File> | null>(null);
   const [lastInput, setLastInput] = React.useState<InputType | undefined>();
@@ -84,10 +96,10 @@ export function Converter() {
   const cancelled = React.useRef(false); // user hit Cancel during this run
   const progressNow = React.useRef(0); // latest progress, for the cancel event
 
-  // Revoke the object URL when it's replaced or the component unmounts.
+  // Revoke the object URLs when they're replaced or the component unmounts.
   React.useEffect(() => {
     return () => {
-      if (result) URL.revokeObjectURL(result.url);
+      if (result) revokeResult(result);
     };
   }, [result]);
 
@@ -95,7 +107,7 @@ export function Converter() {
     // `force` re-runs a failed conversion on the other pipeline. Only the retry
     // passes it; normal runs let selectPipeline decide.
     async (input: RunInput, force?: Pipeline) => {
-      if (result) URL.revokeObjectURL(result.url);
+      if (result) revokeResult(result);
       setResult(null);
       setError("");
       setProgress(0);
@@ -150,11 +162,17 @@ export function Converter() {
         // Only the wasm path has a converter to download; the native one starts
         // encoding immediately.
         setPhase(pipeline === "ffmpeg" ? "Loading converter…" : "Converting…");
+        // Held as a Blob rather than a URL until the run succeeds, so a failure
+        // after this point cannot leak one.
+        let poster: Blob | undefined;
         const mp4 = await convertPair(pair.cdg, pair.mp3, {
           size,
           pipeline,
           onAudioCodec: (c) => {
             audioCodec = c;
+          },
+          onPoster: (image) => {
+            poster = image;
           },
           onProgress: (r) => {
             stage = "convert";
@@ -176,7 +194,11 @@ export function Converter() {
           { pipeline, resolution, audio: audioCodec }
         );
         const url = URL.createObjectURL(blob);
-        setResult({ url, name: `${pair.baseName}.mp4` });
+        setResult({
+          url,
+          name: `${pair.baseName}.mp4`,
+          poster: poster && URL.createObjectURL(poster),
+        });
         setProgress(1);
         setStatus("done");
         trackConversionSucceeded({
@@ -415,18 +437,37 @@ export function Converter() {
             controls
             autoPlay
             loop
+            // The title screen when this rip had one. Frame 0 of a CD+G is always
+            // blank, so without it the player opens on black.
+            poster={result.poster}
             // Safari blocks autoplay of anything with an audio track, and will not
             // decode a frame it was never asked to display, so the player sits grey
             // until the user hits play. Seeking once metadata is in forces the paint.
             // A `#t=0.001` fragment on the src is the usual trick and does nothing
             // here, since Safari ignores media fragments on blob: URLs.
+            //
+            // Only without a poster, though. Painting a frame is precisely what
+            // clears the poster, and frame 0 of a CD+G is blank, so doing both
+            // would trade the title screen for the black frame it exists to hide.
             preload="auto"
-            onLoadedMetadata={(event) => {
-              const video = event.currentTarget;
-              if (video.currentTime === 0) video.currentTime = 0.001;
-            }}
+            onLoadedMetadata={
+              result.poster
+                ? undefined
+                : (event) => {
+                    const video = event.currentTarget;
+                    if (video.currentTime === 0) video.currentTime = 0.001;
+                  }
+            }
             aria-label={`Converted karaoke video: ${result.name}`}
-            className="w-full rounded-lg shadow-medium"
+            // A video element paints its own box with the UA background wherever
+            // the frame does not cover it, and in WebKit that background is grey
+            // rather than black or transparent. It shows before metadata arrives
+            // (the element defaults to 300x150), and in the corners where the
+            // border-radius clip and the video layer disagree. Every output size
+            // is 4:3, so reserving that box and painting it black means there is
+            // no uncovered area to grey out, and no layout shift when the
+            // metadata lands.
+            className="aspect-[4/3] w-full rounded-lg bg-black shadow-medium"
           />
           <div className="flex flex-wrap items-center justify-between gap-md">
             <div>
