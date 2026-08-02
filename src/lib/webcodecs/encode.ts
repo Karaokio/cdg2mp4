@@ -27,6 +27,7 @@
 
 import CDGraphics from "cdgraphics";
 import { log } from "../log";
+import { clearAlternateGroups } from "./altGroups";
 import {
   ALL_FORMATS,
   AudioSampleSink,
@@ -186,10 +187,17 @@ export function parseSize(size: string): [number, number] {
  *
  * Returns the audio duration in seconds, which is how long the video runs.
  */
+/**
+ * Called with each audio sample's timestamp before it is added; resolves when
+ * the sample may go in. How the encode keeps the two tracks moving together —
+ * see the interleaving comment in `encodeCdgToMp4`.
+ */
+type PaceFn = (timestamp: number) => Promise<void>;
+
 async function addAudioTrack(
   output: Output,
   mp3: Uint8Array
-): Promise<{ duration: number; codec: "aac" | "mp3"; run: () => Promise<void> }> {
+): Promise<{ duration: number; codec: "aac" | "mp3"; run: (pace: PaceFn) => Promise<void> }> {
   const input = new Input({ source: new BufferSource(mp3), formats: ALL_FORMATS });
   const track = await input.getPrimaryAudioTrack();
   if (!track) throw new Error("The .mp3 file has no audio track.");
@@ -204,9 +212,10 @@ async function addAudioTrack(
     return {
       duration,
       codec: "aac",
-      run: async () => {
+      run: async (pace) => {
         const sink = new AudioSampleSink(track);
         for await (const sample of sink.samples()) {
+          await pace(sample.timestamp);
           await source.add(sample);
           sample.close();
         }
@@ -223,11 +232,12 @@ async function addAudioTrack(
   return {
     duration,
     codec: "mp3",
-    run: async () => {
+    run: async (pace) => {
       const sink = new EncodedPacketSink(track);
       const decoderConfig = await track.getDecoderConfig();
       let first = true;
       for await (const packet of sink.packets()) {
+        await pace(packet.timestamp);
         await source.add(packet, first ? { decoderConfig: decoderConfig ?? undefined } : undefined);
         first = false;
       }
@@ -288,7 +298,6 @@ export async function encodeCdgToMp4(
     const audio = await addAudioTrack(output, mp3);
     onAudioCodec?.(audio.codec);
     await output.start();
-    await audio.run();
 
     const frames = Math.max(1, Math.ceil(audio.duration * FPS));
     // The CDG is often shorter than the audio; the difference is the stretch
@@ -304,25 +313,76 @@ export async function encodeCdgToMp4(
     // and dropped: a real rip changes ~70% of its frames during lyrics, so it
     // saved 0.1 MB of 6.1 MB and 13% of the encode time, which is not worth
     // handing a variable-rate file to whatever TV or bar player this ends up on.
-    for (let i = 0; i < frames; i++) {
-      const frame = graphics.render(renderTimeForFrame(i));
-      // Past the end of the CDG stream `render` keeps returning the last state
-      // unchanged, so the final graphic holds for the rest of the audio.
-      if (frame.isChanged || i === 0) {
-        sourceCtx.putImageData(frame.imageData, 0, 0);
-        ctx.drawImage(source, 0, 0, width, height);
+    // How far the audio may run ahead of the video, in seconds. Comfortably
+    // more than one muxer chunk (~0.3-0.5s), so the gate never starves the
+    // audio encoder, and small enough that chunks still alternate.
+    const AUDIO_LEAD = 1;
+
+    let videoTime = 0;
+    let videoDone = false;
+    let wake: (() => void) | null = null;
+    const notify = () => {
+      wake?.();
+      wake = null;
+    };
+    // Hold each audio sample until the video timeline is within AUDIO_LEAD of
+    // it. Once the video is done there is nothing left to interleave with, and
+    // the rest of the audio drains freely.
+    const pace: PaceFn = async (timestamp) => {
+      while (!videoDone && timestamp > videoTime + AUDIO_LEAD) {
+        await new Promise<void>((resolve) => (wake = resolve));
       }
-      // Awaiting respects encoder and writer backpressure.
-      await videoSource.add(i / FPS, 1 / FPS);
-      onProgress((i + 1) / frames);
-    }
-    videoSource.close();
+    };
+
+    const pumpVideo = async () => {
+      try {
+        for (let i = 0; i < frames; i++) {
+          const frame = graphics.render(renderTimeForFrame(i));
+          // Past the end of the CDG stream `render` keeps returning the last
+          // state unchanged, so the final graphic holds for the rest of the
+          // audio.
+          if (frame.isChanged || i === 0) {
+            sourceCtx.putImageData(frame.imageData, 0, 0);
+            ctx.drawImage(source, 0, 0, width, height);
+          }
+          // Awaiting respects encoder and writer backpressure.
+          await videoSource.add(i / FPS, 1 / FPS);
+          videoTime = (i + 1) / FPS;
+          notify();
+          onProgress((i + 1) / frames);
+        }
+        videoSource.close();
+      } finally {
+        // Wake the audio gate no matter how this pump exits, or a video error
+        // would leave the audio side suspended forever.
+        videoDone = true;
+        notify();
+      }
+    };
+
+    // Feed both tracks together, audio paced to the video's clock. The muxer
+    // lays chunks down in the order their data arrives, so running the audio to
+    // completion first wrote every audio chunk in one block ahead of all the
+    // video: a non-interleaved file, where a player has to read from two ends
+    // of the file at once. Every ffmpeg output alternates the tracks along the
+    // timeline (121212...) and this restores that. Concurrency alone is not
+    // enough: the audio encode is far cheaper than the video encode and runs
+    // away from it, so the pacing gate holds each audio sample until the video
+    // clock is within AUDIO_LEAD of it.
+    //
+    // To be clear about what this is not: it is container hygiene, not the
+    // Safari fix. The controls-never-hide bug was bisected past interleaving
+    // (a fully interleaved file still failed) to the alternate_group bytes,
+    // see altGroups.ts.
+    await Promise.all([audio.run(pace), pumpVideo()]);
 
     await output.finalize();
     const buffer = output.target.buffer;
     if (!buffer || buffer.byteLength === 0) {
       throw new Error("The converter produced an empty file.");
     }
+    // Two-byte repair of a mediabunny bug that breaks Safari. See altGroups.ts.
+    clearAlternateGroups(new Uint8Array(buffer));
     return buffer;
   } catch (err) {
     // Release the encoders and the muxer's buffers before the error propagates.
