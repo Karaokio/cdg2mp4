@@ -16,7 +16,7 @@
  * cover art, moov placement) ruled out on controlled bases along the way.
  *
  * Until mediabunny writes 0 or exposes the field, this repairs the finalized
- * file. In place: the field is fixed-size, so nothing moves and no offsets
+ * file. Tracked in #86; delete this module when upstream fixes it. In place: the field is fixed-size, so nothing moves and no offsets
  * need rewriting.
  */
 
