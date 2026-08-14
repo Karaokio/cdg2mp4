@@ -115,11 +115,11 @@ export function findTitleFrameTime(
  * Force every pixel opaque, keeping its colour.
  *
  * A CD+G title can declare its background colour transparent, and cdgraphics
- * renders those pixels at alpha 0. The video encoder runs with `alpha: "discard"`,
- * which drops the alpha channel and keeps the RGB, so the video shows the
- * background colour. PNG has no such step and would keep the hole, leaving a
- * cover image that disagrees with every frame of the file it is attached to.
- * This is that discard, done by hand.
+ * renders those pixels at alpha 0. A 2D canvas stores pixels premultiplied, so
+ * putImageData of (r,g,b,0) collapses to (0,0,0,0): the colour is destroyed on
+ * write, and everything downstream (drawImage, the encoder, a PNG export) sees
+ * black. Both the video pump and the cover render therefore force alpha to 255
+ * first, which is what a CD+G player does with the key colour anyway (#87).
  *
  * Mutates in place: the caller owns the buffer, and copying 300x216 to throw the
  * original away immediately would be waste.

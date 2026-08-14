@@ -341,8 +341,7 @@ export async function encodeCdgToMp4(
   // Replace the destination rather than blending into it. A CD+G title can
   // declare a transparent background, and drawImage's default source-over would
   // then composite every frame on top of the one before, accumulating every
-  // lyric ever drawn into a smear. ffmpeg's decoder drops the alpha and keeps
-  // the RGB, and "copy" is how you say that here.
+  // lyric ever drawn into a smear.
   ctx.globalCompositeOperation = "copy";
 
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
@@ -416,6 +415,12 @@ export async function encodeCdgToMp4(
           // state unchanged, so the final graphic holds for the rest of the
           // audio.
           if (frame.isChanged || i === 0) {
+            // Opaque before it touches the canvas: a rip that declares its
+            // background color transparent renders those pixels at alpha 0, and
+            // putImageData premultiplies, turning their RGB to black before
+            // "copy" or the encoder's alpha handling ever runs (#87). Safe to
+            // mutate: renderFrame rewrites every pixel on the next render.
+            discardAlpha(frame.imageData.data);
             sourceCtx.putImageData(frame.imageData, 0, 0);
             ctx.drawImage(source, 0, 0, width, height);
           }
