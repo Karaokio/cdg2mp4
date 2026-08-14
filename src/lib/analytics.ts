@@ -93,6 +93,8 @@ export const trackConversionSucceeded = (
     output_mb_bucket: string;
     output_kbps: number;
     audio_codec?: string;
+    /** Source MP3 sample rate in Hz (native path only). */
+    audio_hz?: number;
   } & ConvPipeline &
     ConvFiles
 ) => track("conversion_succeeded", p);
@@ -105,6 +107,10 @@ export const trackConversionFailed = (
     reason: string;
     error_name?: string;
     error_message?: string;
+    audio_codec?: string;
+    /** Source MP3 sample rate in Hz (native path only, when parsing got far
+     * enough to know it). An encoder can exist and still reject a rate (#88). */
+    audio_hz?: number;
     /** Extensions found inside a rejected zip (comma-joined), e.g. "mp4,txt". */
     zip_extensions?: string;
   } & ConvPipeline &
@@ -126,11 +132,12 @@ export const trackConversionCancelled = (
  * The name + truncated message of an error's underlying `cause`, for failure
  * events. User-facing messages are generic on purpose (see classifyError);
  * the cause is the real error (fetch/wasm/worker), which is what makes a
- * failure diagnosable. Empty when there is no Error cause attached.
+ * failure diagnosable. An error without a cause is its own detail: dropping
+ * it entirely left every native-pipeline failure blank in telemetry (#88).
  */
 export function errorDetail(e: unknown): { error_name?: string; error_message?: string } {
-  if (!(e instanceof Error) || e.cause === undefined) return {};
-  const cause = e.cause;
+  if (!(e instanceof Error)) return {};
+  const cause = e.cause === undefined ? e : e.cause;
   return cause instanceof Error
     ? { error_name: cause.name, error_message: cause.message.slice(0, 200) }
     : { error_name: "NonError", error_message: String(cause).slice(0, 200) };
@@ -192,6 +199,10 @@ export function classifyError(message: string): string {
   // Native-pipeline failures. Separate codes because they point at different
   // fixes: a device that cannot encode needs routing, a bad .mp3 needs the user.
   if (/drawing canvas|can't be encoded in your browser/i.test(message)) return "encoder_error";
+  // mediabunny's rejection when an encoder exists but not for this input's
+  // parameters: an AAC encoder that takes only 44.1/48 kHz fed a 32 kHz MP3
+  // (#88). Permanent for the file+browser pair; a retry cannot clear it.
+  if (/encoder configuration/i.test(message)) return "encoder_config_unsupported";
   if (/no audio track/i.test(message)) return "bad_audio";
   if (/produced an empty/i.test(message)) return "empty_output";
   if (/Drop a karaoke|matching|file is empty/i.test(message)) return "bad_input";

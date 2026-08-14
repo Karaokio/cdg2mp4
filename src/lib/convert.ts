@@ -89,7 +89,7 @@ export async function convertPair(
     onProgress?: ProgressFn;
     onLog?: LogFn;
     /** Native pipeline only: which audio codec its fallback chain chose. */
-    onAudioCodec?: (codec: "aac" | "mp3") => void;
+    onAudioCodec?: (codec: "aac" | "mp3", sampleRate?: number) => void;
     /** Native pipeline only, and only when the rip has a title screen: a still
      * of it, already embedded in the MP4 as cover art. ffmpeg.wasm never fires
      * this, so the same conversion can come back with or without one. */

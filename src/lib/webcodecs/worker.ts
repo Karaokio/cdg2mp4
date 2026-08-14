@@ -18,7 +18,7 @@ export type WorkerRequest = {
 
 export type WorkerResponse =
   | { type: "progress"; ratio: number }
-  | { type: "audio-codec"; codec: "aac" | "mp3" }
+  | { type: "audio-codec"; codec: "aac" | "mp3"; sampleRate?: number }
   // `poster` is the title screen when the rip has one, for the player to show
   // instead of a black frame 0. It is already embedded in `buffer` as cover art;
   // this copy saves the main thread demuxing it back out.
@@ -44,7 +44,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       mp3,
       size,
       (ratio) => post({ type: "progress", ratio }),
-      (codec) => post({ type: "audio-codec", codec })
+      (codec, sampleRate) => post({ type: "audio-codec", codec, sampleRate })
     );
     // The poster's bytes are a standalone buffer, so transfer rather than copy.
     const image = poster ? toTransferable(poster.data) : null;

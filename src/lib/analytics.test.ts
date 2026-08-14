@@ -51,6 +51,14 @@ describe("classifyError", () => {
     ["The converter produced an empty file.", "empty_output"],
     ["Could not create a drawing canvas.", "encoder_error"],
     ["This audio can't be encoded in your browser.", "encoder_error"],
+    // mediabunny's text when an encoder exists but rejects this input's
+    // parameters, e.g. an AAC encoder fed a 32 kHz MP3 (#88).
+    [
+      "This specific encoder configuration (mp4a.40.2, 128000 bps, 1 channels, 32000 Hz) " +
+        "is not supported by this browser. Consider using another codec or changing your " +
+        "audio parameters.",
+      "encoder_config_unsupported",
+    ],
     ["The .mp3 file has no audio track.", "bad_audio"],
     ["something nobody anticipated", "unknown"],
   ])("%s -> %s", (message, code) => {
@@ -73,9 +81,22 @@ describe("errorDetail", () => {
       error_message: "a string",
     });
   });
-  it("returns an empty object when there is no cause", () => {
-    expect(errorDetail(new Error("no cause"))).toEqual({});
+  it("falls back to the error itself when there is no cause", () => {
+    expect(errorDetail(new Error("no cause"))).toEqual({
+      error_name: "Error",
+      error_message: "no cause",
+    });
     expect(errorDetail("not an error")).toEqual({});
+  });
+  it("keeps the worker boundary's rebuilt name and message", () => {
+    // The shape src/lib/webcodecs.ts rebuilds from a worker's {message, name}.
+    const cause = new Error("This specific encoder configuration is not supported");
+    cause.name = "NotSupportedError";
+    const e = new Error("This specific encoder configuration is not supported", { cause });
+    expect(errorDetail(e)).toEqual({
+      error_name: "NotSupportedError",
+      error_message: "This specific encoder configuration is not supported",
+    });
   });
 });
 

@@ -69,7 +69,7 @@ the native pipeline at all. That measures the rollout's reach across all visitor
 the ones who convert.
 
 - `conversion_succeeded` { input_type, resolution, pipeline, output_kbps, audio_codec,
-  duration_ms, song_seconds,
+  audio_hz, duration_ms, song_seconds,
   output_mb_bucket, output_name } + input file names. `song_seconds` is derived from the
   CDG stream length (300 packets/sec x 24 bytes = 7200 bytes/sec), so it measures the
   graphics duration, not the usually slightly longer MP3. `output_kbps` is the output size
@@ -78,11 +78,16 @@ the ones who convert.
   "5-20". `audio_codec` is the native path's choice of `aac` or (where no AAC encoder
   exists) `mp3` remuxed, which are not equally playable.
 - `conversion_failed` { input_type, resolution, pipeline, stage, reason, error_name?,
-  error_message?, zip_extensions? } + input file names. `reason` is the low-cardinality
+  error_message?, audio_codec?, audio_hz?, zip_extensions? } + input file names.
+  `reason` is the low-cardinality
   code from `classifyError` (e.g. `load_failed`, `ffmpeg_error`, `bad_input`).
   `simd_unsupported` is split out from `load_failed` on purpose: it means the device's
   CPU cannot run the SIMD core at all, so it is a permanent failure rather than one a
-  retry might clear. `encoder_error` and `bad_audio` come from the native pipeline.
+  retry might clear. `encoder_error`, `encoder_config_unsupported` and `bad_audio` come
+  from the native pipeline; `encoder_config_unsupported` is the browser's AAC encoder
+  rejecting the source sample rate (#88), which `audio_hz` makes visible in aggregate.
+  `audio_hz` is the source MP3's sample rate on the native path (both outcomes), since
+  an encoder can exist and still reject a rate.
 - `conversion_cancelled` { input_type, resolution, pipeline, stage, progress_pct,
   duration_ms }
 - `credits_clicked` when someone opens CREDITS.md from the footer.

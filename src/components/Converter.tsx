@@ -131,6 +131,7 @@ export function Converter() {
       let stage = "read";
       let outputName: string | undefined; // the resulting <song>.mp4 (known after parsing)
       let audioCodec: "aac" | "mp3" | undefined; // native path only
+      let audioHz: number | undefined; // source MP3 sample rate, native path only
       setLastInput(inputType);
       setConverting(true); // hold off any service-worker auto-update reload until done
       // Resolved before the first event so every event of this run (including a
@@ -168,8 +169,9 @@ export function Converter() {
         const mp4 = await convertPair(pair.cdg, pair.mp3, {
           size,
           pipeline,
-          onAudioCodec: (c) => {
+          onAudioCodec: (c, hz) => {
             audioCodec = c;
+            audioHz = hz;
           },
           onPoster: (image) => {
             poster = image;
@@ -210,6 +212,7 @@ export function Converter() {
           output_mb_bucket: mbBucket(blob.size),
           output_kbps: outputKbps(blob.size, songSeconds),
           audio_codec: audioCodec,
+          audio_hz: audioHz,
           ...inputNames,
           output_name: outputName,
         });
@@ -242,6 +245,8 @@ export function Converter() {
           stage,
           reason: classifyError(message),
           ...errorDetail(e),
+          audio_codec: audioCodec,
+          audio_hz: audioHz,
           zip_extensions: e instanceof ZipPairError ? e.extensions?.join(",") : undefined,
           ...inputNames,
           output_name: outputName,

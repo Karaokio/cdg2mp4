@@ -256,11 +256,21 @@ type PaceFn = (timestamp: number) => Promise<void>;
 async function addAudioTrack(
   output: Output,
   mp3: Uint8Array
-): Promise<{ duration: number; codec: "aac" | "mp3"; run: (pace: PaceFn) => Promise<void> }> {
+): Promise<{
+  duration: number;
+  codec: "aac" | "mp3";
+  sampleRate?: number;
+  run: (pace: PaceFn) => Promise<void>;
+}> {
   const input = new Input({ source: new BufferSource(mp3), formats: ALL_FORMATS });
   const track = await input.getPrimaryAudioTrack();
   if (!track) throw new Error("The .mp3 file has no audio track.");
   const duration = await input.computeDuration();
+  // The source sample rate rides along to telemetry: an AAC encoder can exist
+  // and still reject a rate (Chrome's takes nothing below 44.1 kHz, and old
+  // rips are often 32 kHz or less), and that is invisible in aggregate without
+  // the rate on the event (#88).
+  const sampleRate = (await track.getDecoderConfig().catch(() => null))?.sampleRate;
 
   const canDecode = await track.canDecode();
   const canAac = await canEncodeAudio("aac", { quality: AUDIO_QUALITY });
@@ -271,6 +281,7 @@ async function addAudioTrack(
     return {
       duration,
       codec: "aac",
+      sampleRate,
       run: async (pace) => {
         const sink = new AudioSampleSink(track);
         for await (const sample of sink.samples()) {
@@ -291,6 +302,7 @@ async function addAudioTrack(
   return {
     duration,
     codec: "mp3",
+    sampleRate,
     run: async (pace) => {
       const sink = new EncodedPacketSink(track);
       const decoderConfig = await track.getDecoderConfig();
@@ -320,7 +332,7 @@ export async function encodeCdgToMp4(
   // Which audio codec the fallback chain settled on. Reported because AAC and
   // MP3-in-MP4 are not equally playable, and a device quietly getting the
   // second one is a plausible cause of a "the file won't play" report.
-  onAudioCodec?: (codec: "aac" | "mp3") => void
+  onAudioCodec?: (codec: "aac" | "mp3", sampleRate?: number) => void
 ): Promise<{ buffer: ArrayBuffer; poster: TitleFrame | null }> {
   const [width, height] = parseSize(size);
 
@@ -369,7 +381,7 @@ export async function encodeCdgToMp4(
 
   try {
     const audio = await addAudioTrack(output, mp3);
-    onAudioCodec?.(audio.codec);
+    onAudioCodec?.(audio.codec, audio.sampleRate);
     await output.start();
 
     const frames = Math.max(1, Math.ceil(audio.duration * FPS));

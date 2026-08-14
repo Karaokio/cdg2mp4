@@ -84,7 +84,7 @@ export function convertCdgToMp4Native(
   opts: {
     size?: string;
     onProgress?: ProgressFn;
-    onAudioCodec?: (codec: "aac" | "mp3") => void;
+    onAudioCodec?: (codec: "aac" | "mp3", sampleRate?: number) => void;
     /** The rip's title screen, when it has one. Never fires on a rip that opens
      * cold, so the caller must cope with never hearing from it. */
     onPoster?: (poster: Blob) => void;
@@ -125,12 +125,13 @@ export function convertCdgToMp4Native(
       if (data.type === "progress") {
         opts.onProgress?.(Math.min(Math.max(data.ratio, 0), 1));
       } else if (data.type === "audio-codec") {
+        const rate = data.sampleRate ? ` (${data.sampleRate} Hz)` : "";
         log(
           data.codec === "aac"
-            ? "audio: re-encoding the MP3 to AAC"
-            : "audio: no AAC encoder here, remuxing the MP3 as-is"
+            ? `audio: re-encoding the MP3${rate} to AAC`
+            : `audio: no AAC encoder here, remuxing the MP3${rate} as-is`
         );
-        opts.onAudioCodec?.(data.codec);
+        opts.onAudioCodec?.(data.codec, data.sampleRate);
       } else if (data.type === "done") {
         const bytes = data.buffer.byteLength;
         log(`encoded ${mb(bytes)} in ${secs(Date.now() - startedAt)}`);
@@ -140,7 +141,13 @@ export function convertCdgToMp4Native(
         finish(() => resolve(new Uint8Array(data.buffer)));
       } else {
         logError("the encoder worker failed", new Error(`${data.name}: ${data.message}`));
-        finish(() => reject(new Error(data.message, { cause: new Error(data.name) })));
+        // Rebuild the worker's error faithfully: the cause carries the original
+        // name AND message. It used to be `new Error(data.name)`, whose .message
+        // was the name, so errorDetail reported error_message: "Error" and every
+        // encoder rejection landed in telemetry as an empty shell (#88).
+        const cause = new Error(data.message);
+        cause.name = data.name;
+        finish(() => reject(new Error(data.message, { cause })));
       }
     };
 
