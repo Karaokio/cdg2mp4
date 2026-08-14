@@ -142,6 +142,50 @@ test.describe("conversion pipelines", () => {
     expect(whiteFraction).toBeLessThan(0.25);
   });
 
+  // The other half of the transparent-background story (#87): cdgraphics gives
+  // key-colored pixels alpha 0 with the right RGB, but a 2D canvas premultiplies
+  // on putImageData, so (r,g,b,0) collapses to black unless the alpha is
+  // discarded first. Real rips (Sunfly among them) declare their background
+  // transparent, and every one of them came out on black. sample-key.cdg's
+  // background is palette 0, deep blue (0,0,170), declared transparent.
+  test("keeps the background color a rip declares transparent", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles([keyedCdg, sampleMp3]);
+    const video = page.locator("video");
+    await expect(video).toBeVisible({ timeout: 90_000 });
+
+    // Sample above the color bars (rows 3-15 of 18 tile-rows), inside the
+    // display area, where nothing but the background is ever drawn.
+    const bg = await video.evaluate(async (el: HTMLVideoElement) => {
+      el.pause();
+      await new Promise((r) => {
+        if (el.readyState >= 2) return r(null);
+        el.addEventListener("loadeddata", r, { once: true });
+      });
+      el.currentTime = 6.5;
+      await new Promise((r) => el.addEventListener("seeked", r, { once: true }));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = el.videoWidth;
+      canvas.height = el.videoHeight;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(el, 0, 0);
+      const d = ctx.getImageData(
+        Math.round(canvas.width / 2),
+        Math.round(canvas.height * (1.5 / 18)),
+        1,
+        1
+      ).data;
+      return { r: d[0], g: d[1], b: d[2] };
+    });
+
+    // Deep blue survives encoding as roughly (0,0,170); the bug renders (0,0,0).
+    expect(bg.b).toBeGreaterThan(100);
+    expect(bg.r).toBeLessThan(60);
+    expect(bg.g).toBeLessThan(60);
+  });
+
   // The safety net for the whole rollout: if the new pipeline fails on a device
   // or a rip we cannot reproduce, the user is one click from the one that has
   // worked for years, without anyone having to understand what a pipeline is.
