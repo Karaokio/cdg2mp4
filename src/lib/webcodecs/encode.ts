@@ -266,14 +266,22 @@ async function addAudioTrack(
   const track = await input.getPrimaryAudioTrack();
   if (!track) throw new Error("The .mp3 file has no audio track.");
   const duration = await input.computeDuration();
-  // The source sample rate rides along to telemetry: an AAC encoder can exist
-  // and still reject a rate (Chrome's takes nothing below 44.1 kHz, and old
-  // rips are often 32 kHz or less), and that is invisible in aggregate without
-  // the rate on the event (#88).
-  const sampleRate = (await track.getDecoderConfig().catch(() => null))?.sampleRate;
+  // Also telemetry (#88): the rate rides along on conversion events.
+  const config = await track.getDecoderConfig().catch(() => null);
+  const sampleRate = config?.sampleRate;
 
   const canDecode = await track.canDecode();
-  const canAac = await canEncodeAudio("aac", { quality: AUDIO_QUALITY });
+  // Probe at the file's own sample rate and channel count, not in the
+  // abstract: an AAC encoder can exist and still reject a rate (Chrome's and
+  // Edge's take nothing below 44.1 kHz, and old rips are often 32 kHz or
+  // less). Asking without the rate said yes, and the encoder then threw mid-
+  // conversion (#88); asking precisely routes those files to the MP3 remux
+  // below, which re-encodes nothing and works at any rate.
+  const canAac = await canEncodeAudio("aac", {
+    quality: AUDIO_QUALITY,
+    sampleRate,
+    numberOfChannels: config?.numberOfChannels,
+  });
 
   if (canDecode && canAac) {
     const source = new AudioSampleSource({ codec: "aac", quality: AUDIO_QUALITY });
