@@ -5,6 +5,8 @@ import { ALL_FORMATS, BufferSource, Input } from "mediabunny";
 const sampleZip = fileURLToPath(new URL("../test/files/sample.zip", import.meta.url));
 const keyedCdg = fileURLToPath(new URL("../test/files/sample-key.cdg", import.meta.url));
 const sampleMp3 = fileURLToPath(new URL("../test/files/sample.mp3", import.meta.url));
+const sampleCdg = fileURLToPath(new URL("../test/files/sample.cdg", import.meta.url));
+const lowRateMp3 = fileURLToPath(new URL("../test/files/sample-32k.mp3", import.meta.url));
 
 /** Run a conversion and return the output MP4's size plus the video's metadata. */
 async function convert(page: Page, url: string) {
@@ -184,6 +186,20 @@ test.describe("conversion pipelines", () => {
     expect(bg.b).toBeGreaterThan(100);
     expect(bg.r).toBeLessThan(60);
     expect(bg.g).toBeLessThan(60);
+  });
+
+  // Old rips are often 32 kHz or below, and Chrome's and Edge's AAC encoders
+  // take nothing under 44.1 kHz. The capability probe used to ask without the
+  // source rate, get a yes, and crash mid-conversion (#88); now it asks at the
+  // file's own rate and a rejected rate routes to the MP3 remux, which encodes
+  // nothing and works at any rate. Either audio path is a pass here; failing
+  // the conversion is the bug.
+  test("converts a 32 kHz MP3 natively instead of crashing the AAC encoder", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles([sampleCdg, lowRateMp3]);
+    await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("button", { name: /try the original converter/i })).toHaveCount(0);
   });
 
   // The safety net for the whole rollout: if the new pipeline fails on a device
