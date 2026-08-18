@@ -1,0 +1,17 @@
+PostHog HogQL, run 2026-08-18. Native-pipeline convert-stage failures carrying a TypeError, last 21 days.
+(distinct_id shortened; file names are what the app already sends, see PRIVACY.md)
+
+d | build | browser | os | cc | user | file | error_name | error_message
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 01 - MUD - TIGER FEET.zip | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 02 - GEORGE McCRAE - ROCK YOUR BABY.zip | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 10 - BAY CITY ROLLERS - SHANG - A - LANG.cdg | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 10 - BAY CITY ROLLERS - SHANG - A - LANG.cdg | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 10 - BAY CITY ROLLERS - SHANG - A - LANG.cdg | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 09 - CARL DOUGLAS - KUNG FOO FIGHTING.cdg | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 14 - SHAWADADDYDADDY - HEY ROCK AND ROLL.cdg | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 10 - BAY CITY ROLLERS - SHANG - A - LANG.zip | Error | TypeError
+2026-08-03 | 633cbef | Chrome | Windows | CA | 019fbe01 | 01 - MUD - TIGER FEET.cdg | Error | TypeError
+2026-08-09 | 633cbef | Chrome | Windows | BE | 019fd875 | 15  End Theme - Elvis Presley.cdg | Error | TypeError
+2026-08-09 | 633cbef | Chrome | Windows | BE | 019fd875 | 15  End Theme - Elvis Presley.cdg | Error | TypeError
+2026-08-16 | 065db03 | Chrome | Windows | CA | 019fbe01 | 01 - MUD - TIGER FEET.cdg | TypeError | undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+2026-08-16 | 065db03 | Chrome | Windows | CA | 019fbe01 | 03 - THREE DEGREES - WHEN WILL I SEE YOU AGAIN.cdg | TypeError | undefined is not iterable (cannot read property Symbol(Symbol.iterator))

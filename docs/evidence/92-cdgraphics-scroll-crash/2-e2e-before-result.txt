@@ -1,0 +1,13 @@
+2-e2e-before: outcome=alert after 183ms
+undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+
+--- console ---
+[info] cdg2mp4 v2.4.7 · build 065db03 · 2026-08-18T16:04:57.237Z · a Karaokio app
+[info] [cdg2mp4] pipeline: webcodecs (forced by ?pipeline=)
+[info] [cdg2mp4] converting sample-scroll.cdg at 1080p (1440x1080)
+[info] [cdg2mp4] encoding 1440x1080 H.264 in a worker
+[info] [cdg2mp4] no cover art: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+[info] [cdg2mp4] audio: re-encoding the MP3 (44100 Hz) to AAC
+[info] [cdg2mp4] 242 frames at 30fps · 8.0s of audio, 8.0s of graphics
+[warning] [cdg2mp4] the encoder worker failed Error: TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+[warning] [cdg2mp4] failed during "load" on webcodecs: undefined is not iterable (cannot read property Symbol(Symbol.iterator)) TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))

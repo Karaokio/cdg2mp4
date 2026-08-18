@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › e2e/pipeline.spec.ts:213:3 › conversion pipelines › converts a rip that scrolls by a fine offset without a border colour (1.8s)
+
+  1 passed (2.7s)

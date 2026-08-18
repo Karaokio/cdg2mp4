@@ -1,7 +1,7 @@
 {
   "name": "cdg2mp4",
   "private": true,
-  "version": "2.4.7",
+  "version": "2.4.8",
   "type": "module",
   "description": "Karaokio CDG-to-MP4 converter — 100% in-browser, offline, powered by WebCodecs with an ffmpeg.wasm fallback.",
   "scripts": {
@@ -20,6 +20,7 @@
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "verify": "npm run typecheck && npm run lint && npm run format && npm run test && npm run build",
+    "postinstall": "patch-package",
     "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
@@ -59,6 +60,7 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "happy-dom": "^20.10.6",
+    "patch-package": "^8.0.1",
     "prettier": "^3.9.0",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.7.3",

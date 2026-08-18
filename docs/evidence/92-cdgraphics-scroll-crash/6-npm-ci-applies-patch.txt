@@ -1,0 +1,6 @@
+> patch-package
+patch-package 8.0.1
+Applying patches...
+cdgraphics@7.0.0 ✔
+added 566 packages, and audited 567 packages in 9s
+1

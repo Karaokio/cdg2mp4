@@ -25,6 +25,9 @@
  * - yuv420p: what a WebCodecs H.264 encoder emits by default.
  */
 
+// Patched: patches/cdgraphics+7.0.0.patch clamps a scroll-offset read that
+// otherwise runs past the pixel buffer and throws (#92). Bumping the package
+// means regenerating that patch, or dropping it once upstream carries the fix.
 import CDGraphics from "cdgraphics";
 import { log, mb } from "../log";
 import { coverageOf, discardAlpha, findTitleFrameTime } from "./titleFrame";

@@ -1,0 +1,11 @@
+
+ RUN  v4.1.9 /Users/lilrobo/proj/karaokio/cdg2mp4
+
+(node:28764) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  09:06:37
+   Duration  690ms (transform 23ms, setup 67ms, import 10ms, tests 312ms, environment 201ms)
+
