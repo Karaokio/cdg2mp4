@@ -1,0 +1,17 @@
+diff --git a/node_modules/cdgraphics/dist/cdgraphics.js b/node_modules/cdgraphics/dist/cdgraphics.js
+index 4fe69d4..77f17f3 100644
+--- a/node_modules/cdgraphics/dist/cdgraphics.js
++++ b/node_modules/cdgraphics/dist/cdgraphics.js
+@@ -35,7 +35,11 @@ class p {
+         if (this.borderColor !== null && (D < this.DISPLAY_BOUNDS[0] || c < this.DISPLAY_BOUNDS[1] || D >= this.DISPLAY_BOUNDS[2] || c >= this.DISPLAY_BOUNDS[3]))
+           C = this.borderColor;
+         else {
+-          const E = D + this.hOffset, O = c + this.vOffset, d = E + O * this.WIDTH;
++          // cdg2mp4 patch (#92): a fine scroll offset pushes the last rows/columns
++          // past the 300x216 buffer; pixels[d] is then undefined and clut[undefined]
++          // cannot be destructured. Those pixels sit in the border, off any real
++          // display, so clamp the read to the buffer edge instead of throwing.
++          const E = Math.min(D + this.hOffset, this.WIDTH - 1), O = Math.min(c + this.vOffset, this.HEIGHT - 1), d = E + O * this.WIDTH;
+           C = this.pixels[d];
+         }
+         const [L, A, H] = this.clut[C], u = C === this.keyColor || t && (C === this.bgColor || this.bgColor == null), T = 4 * (D + c * this.WIDTH);

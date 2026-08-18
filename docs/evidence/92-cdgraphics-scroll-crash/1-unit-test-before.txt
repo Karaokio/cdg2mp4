@@ -1,0 +1,90 @@
+
+ RUN  v4.1.9 /Users/lilrobo/proj/karaokio/cdg2mp4
+
+(node:24972) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ src/lib/webcodecs/cdgraphics.test.ts (5 tests | 4 failed) 36ms
+     × renders a vertical fine offset 9ms
+     × renders a horizontal fine offset 8ms
+     × renders the largest offsets a rip can ask for 4ms
+     × renders the sample-scroll fixture the e2e suite converts 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/webcodecs/cdgraphics.test.ts > cdgraphics with a scroll offset and no border colour > renders a vertical fine offset
+AssertionError: expected [Function] to not throw an error but 'TypeError: undefined is not iterable …' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))"
+
+ ❯ src/lib/webcodecs/cdgraphics.test.ts:45:37
+     43|   it("renders a vertical fine offset", () => {
+     44|     const g = new CDGraphics(rip({ vOffset: 4 }));
+     45|     expect(() => g.render(0.5)).not.toThrow();
+       |                                     ^
+     46|   });
+     47|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/lib/webcodecs/cdgraphics.test.ts > cdgraphics with a scroll offset and no border colour > renders a horizontal fine offset
+AssertionError: expected [Function] to not throw an error but 'TypeError: undefined is not iterable …' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))"
+
+ ❯ src/lib/webcodecs/cdgraphics.test.ts:50:37
+     48|   it("renders a horizontal fine offset", () => {
+     49|     const g = new CDGraphics(rip({ hOffset: 3 }));
+     50|     expect(() => g.render(0.5)).not.toThrow();
+       |                                     ^
+     51|   });
+     52|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/lib/webcodecs/cdgraphics.test.ts > cdgraphics with a scroll offset and no border colour > renders the largest offsets a rip can ask for
+TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+ ❯ p.renderFrame node_modules/cdgraphics/dist/cdgraphics.js:41:27
+ ❯ b.render node_modules/cdgraphics/dist/cdgraphics.js:239:26
+ ❯ src/lib/webcodecs/cdgraphics.test.ts:55:29
+     53|   it("renders the largest offsets a rip can ask for", () => {
+     54|     const g = new CDGraphics(rip({ hOffset: 5, vOffset: 11 }));
+     55|     const { imageData } = g.render(0.5);
+       |                             ^
+     56|     // Every pixel is opaque and comes from the CLUT; nothing is left …
+     57|     for (let i = 3; i < imageData.data.length; i += 4) expect(imageDat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/lib/webcodecs/cdgraphics.test.ts > cdgraphics with a scroll offset and no border colour > renders the sample-scroll fixture the e2e suite converts
+AssertionError: expected [Function] to not throw an error but 'TypeError: undefined is not iterable …' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))"
+
+ ❯ src/lib/webcodecs/cdgraphics.test.ts:67:68
+     65|   it("renders the sample-scroll fixture the e2e suite converts", () =>…
+     66|     const g = new CDGraphics(cdgFile("sample-scroll.cdg"));
+     67|     for (let t = 0; t < 8; t += 0.5) expect(() => g.render(t)).not.toT…
+       |                                                                    ^
+     68|   });
+     69| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 1 passed (5)
+   Start at  09:04:21
+   Duration  378ms (transform 20ms, setup 62ms, import 9ms, tests 36ms, environment 171ms)
+

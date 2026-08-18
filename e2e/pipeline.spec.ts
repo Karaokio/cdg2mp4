@@ -7,6 +7,7 @@ const keyedCdg = fileURLToPath(new URL("../test/files/sample-key.cdg", import.me
 const sampleMp3 = fileURLToPath(new URL("../test/files/sample.mp3", import.meta.url));
 const sampleCdg = fileURLToPath(new URL("../test/files/sample.cdg", import.meta.url));
 const lowRateMp3 = fileURLToPath(new URL("../test/files/sample-32k.mp3", import.meta.url));
+const scrolledCdg = fileURLToPath(new URL("../test/files/sample-scroll.cdg", import.meta.url));
 
 /** Run a conversion and return the output MP4's size plus the video's metadata. */
 async function convert(page: Page, url: string) {
@@ -198,6 +199,21 @@ test.describe("conversion pipelines", () => {
     test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
     await page.goto("/?pipeline=webcodecs");
     await page.locator('input[type="file"]').setInputFiles([sampleCdg, lowRateMp3]);
+    await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("button", { name: /try the original converter/i })).toHaveCount(0);
+  });
+
+  // A rip that scrolls its display by a fine offset (Scroll Preset / Scroll
+  // Copy with a non-zero pixel offset) and never sets a border colour made
+  // cdgraphics 7.0.0 read past its pixel buffer on the last rows, and the
+  // native pipeline died with "undefined is not iterable" a few seconds in
+  // (#92). ffmpeg's decoder handles the same rip fine, so the file was only
+  // ever broken on the fast path. sample-scroll.cdg is sample.cdg with its
+  // Border Preset swapped for a Scroll Preset carrying a 4-row offset.
+  test("converts a rip that scrolls by a fine offset without a border colour", async ({ page }) => {
+    test.skip(!(await nativeAvailable(page)), "no H.264 encoder in this browser");
+    await page.goto("/?pipeline=webcodecs");
+    await page.locator('input[type="file"]').setInputFiles([scrolledCdg, sampleMp3]);
     await expect(page.locator("video")).toBeVisible({ timeout: 90_000 });
     await expect(page.getByRole("button", { name: /try the original converter/i })).toHaveCount(0);
   });

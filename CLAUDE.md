@@ -21,3 +21,7 @@ E2E (`npm run e2e`) is not in `verify` because it needs a Playwright browser and
 The CSP lives in [public/_headers](public/_headers) and Cloudflare Pages serves it. `script-src` has no `'unsafe-inline'`, so **no inline `<script>` in index.html**. Put the code in a file under `public/` and load it with `src` (see [public/theme-init.js](public/theme-init.js)); `script-src 'self'` covers it. Prefer that over adding a `sha256-` hash to the CSP, since a hash breaks silently whenever the script body changes.
 
 CSP violations do not fail any test or build. Verify by serving `dist/` with the `_headers` CSP applied and checking the console, not with `vite dev`, which sends no CSP.
+
+## Patched dependencies
+
+`patches/` holds `patch-package` diffs that `postinstall` applies on every `npm install` / `npm ci`. Today that is `cdgraphics@7.0.0` (scroll-offset out-of-bounds read, #92). Bumping a patched package requires regenerating its patch (`npx patch-package <name>` after editing `node_modules/<name>`), or deleting the patch once upstream has the fix; a version mismatch fails the install loudly.

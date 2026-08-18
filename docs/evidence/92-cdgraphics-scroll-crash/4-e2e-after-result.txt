@@ -1,0 +1,13 @@
+4-e2e-after: outcome=video after 8326ms
+duration=8.13s 1440x1080
+
+--- console ---
+[info] cdg2mp4 v2.4.7 · build 065db03 · 2026-08-18T16:06:52.057Z · a Karaokio app
+[info] [cdg2mp4] pipeline: webcodecs (forced by ?pipeline=)
+[info] [cdg2mp4] converting sample-scroll.cdg at 1080p (1440x1080)
+[info] [cdg2mp4] encoding 1440x1080 H.264 in a worker
+[info] [cdg2mp4] cover art: title screen at 6.50s, 0.0 MB
+[info] [cdg2mp4] audio: re-encoding the MP3 (44100 Hz) to AAC
+[info] [cdg2mp4] 242 frames at 30fps · 8.0s of audio, 8.0s of graphics
+[info] [cdg2mp4] encoded 0.1 MB in 8.2s
+[info] [cdg2mp4] done in 8.2s · 0.1 MB, 1.0x realtime {pipeline: webcodecs, resolution: 1080p, audio: aac}
